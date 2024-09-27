@@ -21,15 +21,12 @@ go.work.sum
 # env file
 .env
 
-# Postgres database
-.db/
-
 # Output directories & files
 tmp
 bin
 vendor
 coverage.out*
-web
+build
 
 # Local env vars
 .env*
