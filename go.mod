@@ -6,6 +6,7 @@ require (
 	github.com/Rhymond/go-money v1.0.14
 	github.com/apsystole/log v0.3.0
 	github.com/avast/retry-go/v4 v4.0.0
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/samber/do v1.6.0
@@ -18,7 +19,6 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/pgx/v5 v5.5.5 // indirect
