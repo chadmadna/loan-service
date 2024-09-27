@@ -1,12 +1,20 @@
 # Loan Service
 Practice for creating a loan service. Create loans from available loan products, register for loans as borrowers, invest in loans as an investor, approve and disburse loans as staff, and assist in loan approval and disbursement as field validator.
 
+## Prerequisites
+- Go 1.19
+- Docker 20
+- Docker Compose 3
+- Postgres 13
+
 ## Quickstart
-- Download Go deps and other dependencies `make dep`
-- Fill in `.env` by copying from defaults `.env.template`
-- Register additional users (borrowers and investors) `make register`
+- Download Go deps and other dependencies `make dep` and `make setup`
+- Fill in `.env` by copying from defaults `env.sample`
+- Seed database with initial data (users, roles, loan products, loans) `make setup`
+- Register additional users (borrowers and investors) `make register-user`
+- Build Go app with `make build` before running via Docker
 - Run service as multi-container with docker-compose.yml `make run`
-- App runs on `localhost:8080` by default, with Postgres in `localhost:5432`
+- App runs on `localhost:8080` by default, with Postgres in `localhost:5555`
 
 ## Definition
 The term loan refers to a type of credit vehicle in which a sum of money is lent to another party in exchange for future repayment of the value or principal amount. In many cases, the lender also adds interest or finance charges to the principal value, which the borrower must repay in addition to the principal balance.
