@@ -1,0 +1,21 @@
+# Database setup inside container
+
+FROM postgres:13-alpine
+
+RUN apk update && apk add --no-cache netcat-openbsd su-exec
+
+WORKDIR /docker-entrypoint-initdb.d
+
+COPY ./init-db.sh /docker-entrypoint-initdb.d/init-db.sh
+
+RUN chmod +x /docker-entrypoint-initdb.d/init-db.sh
+
+ARG DB_USER
+ARG DB_PASSWORD
+ARG DB_NAME
+
+ENV POSTGRES_USER $DB_USER
+ENV POSTGRES_PASSWORD $DB_PASSWORD
+ENV POSTGRES_DB $DB_NAME
+
+CMD ["/docker-entrypoint-initdb.d/init-db.sh"]

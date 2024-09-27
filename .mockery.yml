@@ -1,0 +1,14 @@
+with-expecter: false
+filename: "{{.InterfaceNameSnake}}_mock.go"
+dir: "{{.InterfaceDir}}/mocks"
+mockname: "{{.InterfaceName}}"
+outpkg: "mocks"
+all: True
+recursive: True
+packages:
+  loan-service/services:
+    config:
+      all: True
+  loan-service/models:
+    config:
+      all: True
