@@ -35,7 +35,7 @@ All users can log in, edit their profile, and log out.
     - 1 superuser (admin@loanservice.io)
     - 1 staff (staff@loanservice.io)
     - 1 field validator (field.validator@loanservice.io)
-- Additional users with custom emails can be registered by executing `make register-user`. See the `Quickstart` section for more details.
+- Additional users with custom emails can be registered by executing `make register-user`. See the [Quickstart](#quickstart) section for more details.
 
 ### Loans
 - A loan can be in the following states: `[proposed, approved, invested, disbursed]`. The state change must move forward in that order.
@@ -91,9 +91,8 @@ The data entities will include the following objects:
 - Roles (borrower, investor, staff, field validator, superuser)
 - Products (different loan products have different principals, interest rates, and terms)
 - Loans (a single loan of a specific product, requested by borrower and paid for by investors)
-    - Approvals will be embedded into the main loan entity since it has 1-to-1 relationship.
+    - Approvals and disbursements will be embedded into the main loan entity since it has 1-to-1 relationship.
 - Investments (money pitched in by investors to loans)
-- Disbursements
 
 
 
