@@ -1,10 +1,7 @@
-FROM golang:1.19-alpine
+FROM golang:1.20-alpine
 
-# Install required dependencies (dockerize to run init-db.sh)
-RUN apk update && apk add --no-cache bash wget make \
-  && wget https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-linux-amd64-v0.6.1.tar.gz \
-  && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-v0.6.1.tar.gz \
-  && rm dockerize-linux-amd64-v0.6.1.tar.gz
+# Install required dependencies
+RUN apk update && apk add --no-cache bash wget make
 
 # Set working directory inside the container
 WORKDIR /app

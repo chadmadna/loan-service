@@ -1,6 +1,7 @@
 package users
 
 import (
+	"context"
 	"loan-service/models"
 	"loan-service/services/auth"
 
@@ -12,8 +13,8 @@ type repository struct {
 }
 
 // CreateUser implements models.UserRepository.
-func (r *repository) CreateUser(user *models.User) error {
-	err := r.db.Model(&models.User{}).Save(models.User{
+func (r *repository) CreateUser(ctx context.Context, user *models.User) error {
+	err := r.db.WithContext(ctx).Model(&models.User{}).Save(models.User{
 		Name:           user.Name,
 		Email:          user.Email,
 		HashedPassword: user.HashedPassword,
@@ -29,9 +30,9 @@ func (r *repository) CreateUser(user *models.User) error {
 }
 
 // FetchUser implements models.UserRepository.
-func (r *repository) FetchUser(userID uint) (*models.User, error) {
+func (r *repository) FetchUser(ctx context.Context, userID uint) (*models.User, error) {
 	var result *models.User
-	err := r.db.Model(&models.User{}).Where("id = ?", userID).First(&result).Error
+	err := r.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", userID).First(&result).Error
 	if err != nil {
 		return nil, err
 	}
@@ -40,13 +41,13 @@ func (r *repository) FetchUser(userID uint) (*models.User, error) {
 }
 
 // FetchAllUsers implements models.UserRepository.
-func (r *repository) FetchUsers(allowedRoles []auth.RoleType, allowedLoanIDs []uint) ([]models.User, error) {
+func (r *repository) FetchUsers(ctx context.Context, allowedRoles []auth.RoleType, allowedLoanIDs []uint) ([]models.User, error) {
 	var results []models.User
 	var userIDs []uint
 
 	if len(allowedLoanIDs) > 0 {
 		var loans []models.Loan
-		err := r.db.Model(&models.Loan{}).Where("id IN (?)", allowedLoanIDs).
+		err := r.db.WithContext(ctx).Model(&models.Loan{}).Where("id IN (?)", allowedLoanIDs).
 			Preload("Borrower", "role_type = ?", auth.RoleTypeBorrower).
 			Preload("Investors", "role_type = ?", auth.RoleTypeInvestor).
 			Find(&loans).Error
@@ -62,7 +63,7 @@ func (r *repository) FetchUsers(allowedRoles []auth.RoleType, allowedLoanIDs []u
 		}
 	}
 
-	err := r.db.Model(&models.User{}).Where("role_type IN (?) AND id IN (?)", allowedRoles, userIDs).Find(&results).Error
+	err := r.db.WithContext(ctx).Model(&models.User{}).Where("role_type IN (?) AND id IN (?)", allowedRoles, userIDs).Find(&results).Error
 	if err != nil {
 		return nil, err
 	}
@@ -71,19 +72,36 @@ func (r *repository) FetchUsers(allowedRoles []auth.RoleType, allowedLoanIDs []u
 }
 
 // UpdateUser implements models.UserRepository.
-func (r *repository) UpdateUser(user *models.User) error {
-	panic("unimplemented")
+func (r *repository) UpdateUser(ctx context.Context, user *models.User) error {
+	err := r.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", user.ID).Save(user).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // FetchRoleByRoleType implements models.UserRepository.
-func (r *repository) FetchRoleByRoleType(roleType auth.RoleType) (*models.Role, error) {
-	var role *models.Role
-	err := r.db.Model(&models.Role{}).Where("role_type = ?", string(roleType)).First(&role).Error
+func (r *repository) FetchRoleByRoleType(ctx context.Context, roleType auth.RoleType) (*models.Role, error) {
+	var result *models.Role
+	err := r.db.WithContext(ctx).Model(&models.Role{}).Where("role_type = ?", string(roleType)).First(&result).Error
 	if err != nil {
 		return nil, err
 	}
 
-	return role, nil
+	return result, nil
+}
+
+// FetchUserByEmail implements models.UserRepository.
+func (r *repository) FetchUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	var result *models.User
+	err := r.db.WithContext(ctx).Model(&models.User{}).Where("email = ?", email).
+		Preload("Role").First(&result).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func NewUserRepository(db *gorm.DB) models.UserRepository {

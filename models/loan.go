@@ -10,6 +10,8 @@ type Loan struct {
 	gorm.Model
 	BorrowerID              uint    `json:"borrower_id"`
 	Borrower                User    `json:"borrower"`
+	ProductID               uint    `json:"product_id"`
+	Product                 Product `json:"product"`
 	PrincipalAmount         string  `json:"principal_amount"`
 	InterestRate            float64 `json:"interest_rate"`
 	ROI                     string  `json:"roi"`

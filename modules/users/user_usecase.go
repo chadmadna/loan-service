@@ -1,11 +1,15 @@
 package users
 
 import (
+	"context"
 	"errors"
 	"loan-service/models"
 	"loan-service/services/auth"
 	"loan-service/utils/errs"
+	"time"
 
+	"github.com/golang-jwt/jwt"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -15,11 +19,11 @@ type usecase struct {
 }
 
 // ViewUsers implements models.UserUsecase.
-func (u *usecase) ViewUsers(opts models.ViewUsersOpt) ([]models.User, error) {
+func (u *usecase) ViewUsers(ctx context.Context, opts models.ViewUsersOpt) ([]models.User, error) {
 	var allowedRoles []auth.RoleType
 	var allowedLoans []models.Loan
 
-	role, err := u.repo.FetchRoleByRoleType(opts.RoleType)
+	role, err := u.repo.FetchRoleByRoleType(ctx, opts.RoleType)
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}
@@ -46,7 +50,7 @@ func (u *usecase) ViewUsers(opts models.ViewUsersOpt) ([]models.User, error) {
 		loanIDs = append(loanIDs, loan.ID)
 	}
 
-	results, err := u.repo.FetchUsers(allowedRoles, loanIDs)
+	results, err := u.repo.FetchUsers(ctx, allowedRoles, loanIDs)
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}
@@ -55,22 +59,67 @@ func (u *usecase) ViewUsers(opts models.ViewUsersOpt) ([]models.User, error) {
 }
 
 // Login implements models.UserUsecase.
-func (u *usecase) Login(email string, password string) (models.LoginResponse, error) {
-	panic("unimplemented")
-}
+func (u *usecase) Login(ctx context.Context, email string, password string) (models.LoginResponse, string, string, error) {
+	var response models.LoginResponse
+	var hashedPassword []byte
 
-// Logout implements models.UserUsecase.
-func (u *usecase) Logout(email string) error {
-	panic("unimplemented")
+	if email == "" || password == "" {
+		return response, "", "", errs.Wrap(ErrUnauthorized)
+	}
+
+	authenticatedUser, err := u.repo.FetchUserByEmail(ctx, email)
+	if err != nil {
+		return response, "", "", errs.Wrap(ErrUnauthorized)
+	}
+
+	if authenticatedUser != nil {
+		hashedPassword = authenticatedUser.HashedPassword
+	}
+
+	if err := bcrypt.CompareHashAndPassword(hashedPassword, []byte(password)); err != nil {
+		return response, "", "", errs.Wrap(ErrUnauthorized)
+	}
+
+	now := time.Now()
+
+	accessToken, err := auth.NewAccessToken(auth.AuthClaims{
+		UserID:   authenticatedUser.ID,
+		Email:    authenticatedUser.Email,
+		Name:     authenticatedUser.Name,
+		RoleType: authenticatedUser.Role.RoleType,
+		StandardClaims: jwt.StandardClaims{
+			IssuedAt:  now.Unix(),
+			ExpiresAt: now.Add(auth.DefaultAccessTokenTTL).Unix(),
+		},
+	})
+	if err != nil {
+		return response, "", "", errs.Wrap(ErrUnauthorized)
+	}
+
+	refreshToken, err := auth.NewRefreshToken(jwt.StandardClaims{
+		IssuedAt:  now.Unix(),
+		ExpiresAt: now.Add(auth.DefaultRefreshTokenTTL).Unix(),
+	})
+	if err != nil {
+		return response, "", "", errs.Wrap(ErrUnauthorized)
+	}
+
+	response = models.LoginResponse{
+		UserID: authenticatedUser.ID,
+		Email:  authenticatedUser.Email,
+		Name:   authenticatedUser.Name,
+	}
+
+	return response, accessToken, refreshToken, nil
 }
 
 // RegisterUser implements models.UserUsecase.
-func (u *usecase) RegisterUser(user *models.User) error {
+func (u *usecase) RegisterUser(ctx context.Context, user *models.User) error {
 	panic("unimplemented")
 }
 
 // UpdateProfile implements models.UserUsecase.
-func (u *usecase) UpdateProfile(user *models.User) error {
+func (u *usecase) UpdateProfile(ctx context.Context, user *models.User) error {
 	panic("unimplemented")
 }
 

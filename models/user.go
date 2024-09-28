@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"loan-service/services/auth"
 
 	"golang.org/x/crypto/bcrypt"
@@ -21,11 +22,9 @@ type User struct {
 }
 
 type LoginResponse struct {
-	UserID       uint   `json:"user_id"`
-	Name         string `json:"name"`
-	Email        string `json:"email"`
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	UserID uint   `json:"user_id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
 }
 
 func (User) TableName() string {
@@ -44,17 +43,17 @@ type ViewUsersOpt struct {
 }
 
 type UserRepository interface {
-	CreateUser(user *User) error
-	FetchUser(userID uint) (*User, error)
-	FetchUsers(allowedRoles []auth.RoleType, allowedLoanIDs []uint) ([]User, error)
-	UpdateUser(user *User) error
-	FetchRoleByRoleType(roleType auth.RoleType) (*Role, error)
+	CreateUser(ctx context.Context, user *User) error
+	FetchUser(ctx context.Context, userID uint) (*User, error)
+	FetchUsers(ctx context.Context, allowedRoles []auth.RoleType, allowedLoanIDs []uint) ([]User, error)
+	UpdateUser(ctx context.Context, user *User) error
+	FetchRoleByRoleType(ctx context.Context, roleType auth.RoleType) (*Role, error)
+	FetchUserByEmail(ctx context.Context, email string) (*User, error)
 }
 
 type UserUsecase interface {
-	Login(email, password string) (LoginResponse, error)
-	Logout(email string) error
-	ViewUsers(opts ViewUsersOpt) ([]User, error)
-	RegisterUser(user *User) error
-	UpdateProfile(user *User) error
+	Login(ctx context.Context, email, password string) (LoginResponse, string, string, error)
+	ViewUsers(ctx context.Context, opts ViewUsersOpt) ([]User, error)
+	RegisterUser(ctx context.Context, user *User) error
+	UpdateProfile(ctx context.Context, user *User) error
 }

@@ -2,7 +2,7 @@
 Practice for creating a loan service. Create loans from available loan products, register for loans as borrowers, invest in loans as an investor, approve and disburse loans as staff, and assist in loan approval and disbursement as field validator.
 
 ## Prerequisites
-- Go 1.19
+- Go 1.20
 - Docker 20
 - Docker Compose 3
 - Postgres 13
@@ -11,9 +11,9 @@ Practice for creating a loan service. Create loans from available loan products,
 - Download Go deps and other dependencies `make dep` and `make setup`
 - Fill in `.env` by copying from defaults `env.sample`
 - Register additional users (borrowers and investors) `make register-user`
-- Build Go app with `make build` before running via Docker
+- Run in dev mode on Docker with hot reload `make run-dev`
 - Run service as multi-container with docker-compose.yml `make run`
-- Seed database with initial data (users, roles, loan products, loans) `make seed-db`
+- Seed database with initial data once database is up `make seed-db`
 - App runs on `localhost:8080` by default, with Postgres in `localhost:5432`
 
 ## Definition

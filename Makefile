@@ -68,12 +68,16 @@ seed-db:
 		go run database/seed/seed.go
 
 build:
-	@go mod tidy
+	@GO111MODULE=on go mod tidy
 	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o ./build/web ./app/web/
 
 run: dep build
 run:
-	@docker-compose up --build
+	@DOCKERFILE_PATH=Dockerfile docker-compose up --build
+
+run-dev: dep build
+run-dev:
+	@DOCKERFILE_PATH=Dockerfile.dev docker-compose up --build
 
 test:
 	@go test ./... --short -cover
@@ -83,4 +87,3 @@ lint: $(GOLANGCI)
 
 gen-mocks: $(MOCKERY)
 	@mockery --all
-

@@ -10,13 +10,15 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-const AuthClaimsCtxKey = "auth"
-
 func JWTAuth(userRepo models.UserRepository) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			accessToken := c.Request().Header.Get("Bearer-Token")
-			refreshToken := c.Request().Header.Get("X-Refresh-Token")
+			var accessToken = c.Request().Header.Get("Authorization")
+			var refreshToken string
+			refreshTokenCookie, _ := c.Request().Cookie(auth.RefreshTokenCookieKey)
+			if refreshTokenCookie != nil {
+				refreshToken = refreshTokenCookie.Value
+			}
 
 			// Ensure access token format as bearer token
 			isValidAccessToken := len(accessToken) > 7 || strings.ToLower(accessToken[:7]) == "bearer "
@@ -37,7 +39,7 @@ func JWTAuth(userRepo models.UserRepository) echo.MiddlewareFunc {
 			}
 
 			// Validate user from auth claims
-			_, err = userRepo.FetchUser(authClaims.UserID)
+			_, err = userRepo.FetchUser(c.Request().Context(), authClaims.UserID)
 			if err != nil {
 				return resp.HTTPUnauthorized(c)
 			}
@@ -48,7 +50,7 @@ func JWTAuth(userRepo models.UserRepository) echo.MiddlewareFunc {
 				if err != nil {
 					return resp.HTTPServerError(c)
 				}
-				c.Response().Header().Set("X-Refresh-Token", newRefreshToken)
+				c.SetCookie(auth.RefreshTokenCookie(newRefreshToken))
 			}
 
 			// Access token expired/invalid but refresh claim is valid, refresh access token
@@ -57,10 +59,10 @@ func JWTAuth(userRepo models.UserRepository) echo.MiddlewareFunc {
 				if err != nil {
 					return resp.HTTPServerError(c)
 				}
-				c.Response().Header().Set("X-Access-Token", newAccessToken)
+				c.Response().Header().Set("Authorization", newAccessToken)
 			}
 
-			c.Set(AuthClaimsCtxKey, authClaims)
+			c.Set(auth.AuthClaimsCtxKey, *authClaims)
 
 			return next(c)
 		}
@@ -71,7 +73,7 @@ func AllowOnlyRoles(allowedRoleTypes ...auth.RoleType) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Get claims from request context
-			claims, ok := c.Get(AuthClaimsCtxKey).(auth.AuthClaims)
+			claims, ok := c.Get(auth.AuthClaimsCtxKey).(auth.AuthClaims)
 			if !ok {
 				return resp.HTTPUnauthorized(c)
 			}

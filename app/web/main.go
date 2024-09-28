@@ -16,9 +16,9 @@ import (
 
 	_userHandlers "loan-service/modules/users/handlers"
 
-	"github.com/apsystole/log"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	_log "github.com/labstack/gommon/log"
 	"github.com/samber/do"
 	"golang.org/x/time/rate"
 	"gorm.io/gorm"
@@ -27,7 +27,7 @@ import (
 var injector *do.Injector
 
 func main() {
-	log.Println("Running in stage:", config.Data.Stage)
+	fmt.Println("Running in stage:", config.Data.Stage)
 
 	// Load env variables
 	envPath := tern.String(os.Getenv("ENV_PATH"), ".env")
@@ -82,6 +82,7 @@ func main() {
 	e := echo.New()
 	e.HTTPErrorHandler = httpErrorHandler
 	e.HideBanner = true
+	e.Logger.SetLevel(_log.DEBUG)
 
 	e.Pre(middleware.RemoveTrailingSlash())
 
@@ -95,22 +96,31 @@ func main() {
 	)))
 
 	// Register router groups
-	mainGroup := e.Group("/", authMiddleware.JWTAuth(do.MustInvoke[models.UserRepository](injector)))
-	// staffGroup := mainGroup.Group("/admin", authMiddleware.AllowOnlyRoles(
+	// mg := e.Group("/", authMiddleware.JWTAuth(do.MustInvoke[models.UserRepository](injector)))
+	// staffGroup := mg.Group("/admin", authMiddleware.AllowOnlyRoles(
 	// 	auth.RoleTypeSuperuser, auth.RoleTypeStaff,
 	// ))
-	// fieldValidatorGroup := mainGroup.Group("/field-validation", authMiddleware.AllowOnlyRoles(
+	// fieldValidatorGroup := mg.Group("/field-validation", authMiddleware.AllowOnlyRoles(
 	// 	auth.RoleTypeSuperuser, auth.RoleTypeStaff, auth.RoleTypeFieldValidator,
 	// ))
-	// investorGroup := mainGroup.Group("/invest", authMiddleware.AllowOnlyRoles(
+	// investorGroup := mg.Group("/invest", authMiddleware.AllowOnlyRoles(
 	// 	auth.RoleTypeSuperuser, auth.RoleTypeInvestor,
 	// ))
-	// borrowGroup := mainGroup.Group("/user", authMiddleware.AllowOnlyRoles(
+	// borrowGroup := mg.Group("/user", authMiddleware.AllowOnlyRoles(
 	// 	auth.RoleTypeSuperuser, auth.RoleTypeBorrower,
 	// ))
 
+	// Healthcheck
+	e.GET("/ping", func(c echo.Context) error {
+		return c.String(http.StatusOK, "pong")
+	})
+
 	// Register endpoints for each group
-	_userHandlers.NewCommonUsersHandler(mainGroup, do.MustInvoke[models.UserUsecase](injector))
+	_userHandlers.NewCommonUsersHandler(
+		e,
+		do.MustInvoke[models.UserUsecase](injector),
+		authMiddleware.JWTAuth(do.MustInvoke[models.UserRepository](injector)),
+	)
 
 	// Start server
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", config.Data.AppPort)))
@@ -125,7 +135,7 @@ func httpErrorHandler(err error, c echo.Context) {
 	if code != http.StatusInternalServerError {
 		_ = c.JSON(code, err)
 	} else {
-		log.Error(err)
+		c.Logger().Error(err)
 		_ = resp.HTTPServerError(c)
 	}
 }

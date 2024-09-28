@@ -1,16 +1,24 @@
 package auth
 
 import (
+	"fmt"
 	"loan-service/config"
 	"loan-service/utils/errs"
+	"net/http"
+	"time"
 
-	"github.com/apsystole/log"
 	"github.com/golang-jwt/jwt"
 )
 
 type RoleType string
 
 const (
+	DefaultAccessTokenTTL  = time.Minute * 5
+	DefaultRefreshTokenTTL = time.Minute * 15
+
+	AuthClaimsCtxKey      = "auth"
+	RefreshTokenCookieKey = "Refresh-Token"
+
 	RoleTypeSuperuser      RoleType = "superuser"
 	RoleTypeStaff          RoleType = "staff"
 	RoleTypeFieldValidator RoleType = "field_validator"
@@ -42,7 +50,7 @@ func ParseAccessToken(accessToken string) (*AuthClaims, error) {
 			return []byte(config.Data.AppSecret), nil
 		})
 	if err != nil {
-		log.Error(errs.Wrap(err))
+		fmt.Println(errs.Wrap(err))
 		return nil, ErrInvalidToken
 	}
 
@@ -60,7 +68,7 @@ func ParseRefreshToken(refreshToken string) (*jwt.StandardClaims, error) {
 			return []byte(config.Data.AppSecret), nil
 		})
 	if err != nil {
-		log.Error(errs.Wrap(err))
+		fmt.Println(errs.Wrap(err))
 		return nil, ErrInvalidToken
 	}
 
@@ -70,4 +78,28 @@ func ParseRefreshToken(refreshToken string) (*jwt.StandardClaims, error) {
 	}
 
 	return claims, nil
+}
+
+func RefreshTokenCookie(token string) *http.Cookie {
+	return &http.Cookie{
+		Name:     RefreshTokenCookieKey,
+		Value:    token,
+		Path:     "/",
+		Expires:  time.Now().Add(DefaultRefreshTokenTTL),
+		MaxAge:   int(time.Duration(DefaultRefreshTokenTTL).Seconds()),
+		Secure:   true,
+		HttpOnly: true,
+	}
+}
+
+func RefreshTokenRemovalCookie() *http.Cookie {
+	return &http.Cookie{
+		Name:     RefreshTokenCookieKey,
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0),
+		MaxAge:   -1,
+		Secure:   true,
+		HttpOnly: true,
+	}
 }

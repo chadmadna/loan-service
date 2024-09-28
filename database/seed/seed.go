@@ -1,28 +1,28 @@
 package main
 
 import (
+	"fmt"
 	"loan-service/config"
 	database "loan-service/database"
 	"loan-service/models"
 	"loan-service/services/auth"
 
-	"github.com/apsystole/log"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 func main() {
-	log.Println("Seeding database..")
+	fmt.Println("Seeding database..")
 
 	// Load env variables
 	err := config.LoadFromEnv()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	db, err := database.GetDB()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	err = db.AutoMigrate(
@@ -32,7 +32,7 @@ func main() {
 		&models.Loan{},
 	)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	roles := []models.Role{
@@ -44,7 +44,7 @@ func main() {
 	}
 
 	if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&roles).Error; err != nil {
-		log.Fatalf("cannot bulk insert roles: %v", err)
+		panic(fmt.Errorf("cannot bulk insert roles: %v", err))
 	}
 
 	users := []models.User{
@@ -97,6 +97,6 @@ func main() {
 	}
 
 	if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&users).Error; err != nil {
-		log.Fatalf("cannot bulk insert users: %v", err)
+		panic(fmt.Errorf("cannot bulk insert users: %v", err))
 	}
 }
