@@ -74,7 +74,7 @@ func (r *repository) FetchLoanByID(ctx context.Context, loanID uint) (*models.Lo
 
 // CreateLoan implements models.LoanRepository.
 func (r *repository) CreateLoan(ctx context.Context, loan *models.Loan) error {
-	err := r.db.WithContext(ctx).Model(&models.Loan{}).Save(loan).Error
+	err := r.db.WithContext(ctx).Model(&models.Loan{}).Create(loan).Error
 	if err != nil {
 		return err
 	}
@@ -87,9 +87,9 @@ func (r *repository) InvestInLoan(ctx context.Context, loan *models.Loan, invest
 	txErr := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Check for existing investments
 		var existingInvestments []models.Investment
-		err := tx.Model(&models.Investment{}).Where("borrower_id = ?", loan.BorrowerID).Find(&existingInvestments).Error
+		err := tx.Model(&models.Investment{}).Where("loan_id = ?", loan.ID).Find(&existingInvestments).Error
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 
 		// Sum up the amounts of existing investments
@@ -97,7 +97,7 @@ func (r *repository) InvestInLoan(ctx context.Context, loan *models.Loan, invest
 		for _, investment := range existingInvestments {
 			amountFloat, err := strconv.ParseFloat(investment.Amount, 64)
 			if err != nil {
-				return err
+				return errs.Wrap(err)
 			}
 
 			existingInvestmentsAmount += amountFloat
@@ -106,11 +106,11 @@ func (r *repository) InvestInLoan(ctx context.Context, loan *models.Loan, invest
 		// Check if amount invested will exceed remaining principal
 		principalAmountFloat, err := strconv.ParseFloat(loan.PrincipalAmount, 64)
 		if err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 
 		if amount+existingInvestmentsAmount > principalAmountFloat {
-			return ErrInvestmentAmountExceedsPrincipal
+			return errs.Wrap(ErrInvestmentAmountExceedsPrincipal)
 		}
 
 		// Create investment
@@ -119,17 +119,17 @@ func (r *repository) InvestInLoan(ctx context.Context, loan *models.Loan, invest
 			LoanID:     loan.ID,
 			Amount:     fmt.Sprintf("%.2f", amount),
 		}).Error; err != nil {
-			return err
+			return errs.Wrap(err)
 		}
 
 		// Update loan status if completely invested
 		if money.NearlyEqual((amount + existingInvestmentsAmount), principalAmountFloat) {
 			if err := loan.AdvanceState(models.LoanStatusInvested, "InvestInLoan"); err != nil {
-				return err
+				return errs.Wrap(err)
 			}
 
-			if err := tx.Model(&models.Loan{}).Save(loan).Error; err != nil {
-				return err
+			if err := tx.Model(loan).Save(loan).Error; err != nil {
+				return errs.Wrap(err)
 			}
 		}
 

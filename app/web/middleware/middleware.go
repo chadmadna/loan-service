@@ -21,7 +21,7 @@ func JWTAuth(userRepo models.UserRepository) echo.MiddlewareFunc {
 			}
 
 			// Ensure access token format as bearer token
-			isValidAccessToken := len(accessToken) > 7 || strings.ToLower(accessToken[:7]) == "bearer "
+			isValidAccessToken := len(accessToken) > 8 && strings.ToLower(accessToken[:7]) == "bearer "
 
 			// Must at least either have both access token and refresh token, or have refresh token only
 			if !isValidAccessToken || refreshToken == "" {

@@ -1,15 +1,16 @@
 package models
 
-import "time"
+import (
+	"gorm.io/gorm"
+)
 
 // Through model between investors and loans
 type Investment struct {
-	InvestorID uint `gorm:"primaryKey;column:investor_id"`
-	LoanID     uint `gorm:"primaryKey;column:loan_id"`
+	gorm.Model
+	InvestorID uint `gorm:"column:investor_id"`
+	LoanID     uint `gorm:"column:loan_id"`
 	Investor   User `gorm:"foreignKey:InvestorID"`
 	Loan       Loan `gorm:"foreignKey:LoanID"`
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
 	Amount     string
 }
 

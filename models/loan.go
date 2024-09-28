@@ -33,12 +33,12 @@ type Loan struct {
 	LoanTerm                   int          `json:"loan_term"`                                                                                                          // in months
 	Investors                  []User       `json:"investors" gorm:"many2many:investments;foreignKey:ID;joinForeignKey:LoanID;references:ID;joinReferences:InvestorID"` //nolint:lll
 	Investments                []Investment `json:"investments" gorm:"foreignKey:LoanID"`
-	VisitorID                  uint         `json:"visitor_id"`
-	Visitor                    *User        `json:"visitor" gorm:"foreignKey:VisitorID"`
-	ApproverID                 uint         `json:"approver_id"`
-	Approver                   *User        `json:"approver" gorm:"foreignKey:ApproverID"`
-	DisburserID                uint         `json:"disburser_id"`
-	Disburser                  *User        `json:"disburser" gorm:"foreignKey:DisburserID"`
+	VisitorID                  *uint        `json:"visitor_id"`
+	Visitor                    *User        `json:"visitor" gorm:"foreignKey:VisitorID;default:null"`
+	ApproverID                 *uint        `json:"approver_id"`
+	Approver                   *User        `json:"approver" gorm:"foreignKey:ApproverID;default:null"`
+	DisburserID                *uint        `json:"disburser_id"`
+	Disburser                  *User        `json:"disburser" gorm:"foreignKey:DisburserID;default:null"`
 	ProofOfVisitAttachmentFile string       `json:"proof_of_visit_attachment_file"`
 	AgreementAttachmentFile    string       `json:"agreement_attachment_file"`
 }
@@ -54,18 +54,18 @@ func (l *Loan) AdvanceState(nextState LoanStatus, action string) error {
 	case LoanStatusProposed:
 		return NewNextStateError(currentState, nextState, action)
 	case LoanStatusApproved:
-		requirementsValid := l.VisitorID != 0 && l.ProofOfVisitAttachmentFile != ""
+		requirementsValid := l.VisitorID != nil && l.ProofOfVisitAttachmentFile != ""
 		if currentState != LoanStatusProposed && requirementsValid {
 			return NewNextStateError(currentState, nextState, action)
 		}
 	case LoanStatusInvested:
 		// still need to make sure in repo that invested amount is exactly the principal amount
-		requirementsValid := l.ApproverID != 0 && len(l.Investors) > 0
+		requirementsValid := l.ApproverID != nil && len(l.Investors) > 0
 		if currentState != LoanStatusApproved && requirementsValid {
 			return NewNextStateError(currentState, nextState, action)
 		}
 	case LoanStatusDisbursed:
-		requirementsValid := l.DisburserID != 0
+		requirementsValid := l.DisburserID != nil
 		if currentState != LoanStatusInvested && requirementsValid {
 			return NewNextStateError(currentState, nextState, action)
 		}

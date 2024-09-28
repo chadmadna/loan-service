@@ -21,7 +21,7 @@ func NewInvestorHandler(
 ) {
 	handler := &InvestorLoanHandler{uc, userUC}
 
-	g.POST("/loan/:id/invest", handler.InvestInLoan)
+	g.POST("/loans/:loan_id/invest", handler.InvestInLoan)
 }
 
 func (h *InvestorLoanHandler) InvestInLoan(c echo.Context) error {

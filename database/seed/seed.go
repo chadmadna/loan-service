@@ -6,7 +6,7 @@ import (
 	database "loan-service/database"
 	"loan-service/models"
 	"loan-service/services/auth"
-	"time"
+	"loan-service/utils/ptr"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -144,28 +144,25 @@ func main() {
 		panic(fmt.Errorf("cannot bulk insert users: %v", err))
 	}
 
-	// Use map to avoid inserting empty values
-	loans := []map[string]any{
+	loans := []models.Loan{
 		{
-			"ID":                         1,
-			"CreatedAt":                  time.Now(),
-			"UpdatedAt":                  time.Now(),
-			"Name":                       "Foreign investment for ada deh",
-			"Status":                     models.LoanStatusApproved,
-			"BorrowerID":                 7,
-			"ProductID":                  3,
-			"PrincipalAmount":            "100000000.0",
-			"InterestRate":               0.06942,
-			"TotalInterest":              "6942000.0",
-			"ROI":                        "6.94",
-			"LoanTerm":                   int(models.TermLength12Month),
-			"VisitorID":                  3,
-			"ApproverID":                 2,
-			"ProofOfVisitAttachmentFile": "https://picsum.photos/seed/loanservice/900/1600",
+			Model:                      gorm.Model{ID: 1},
+			Name:                       "Foreign investment for ada deh",
+			Status:                     models.LoanStatusApproved,
+			BorrowerID:                 7,
+			ProductID:                  3,
+			PrincipalAmount:            "100000000.0",
+			InterestRate:               0.06942,
+			TotalInterest:              "6942000.0",
+			ROI:                        "6.94",
+			LoanTerm:                   int(models.TermLength12Month),
+			VisitorID:                  ptr.NewUintPtr(3),
+			ApproverID:                 ptr.NewUintPtr(2),
+			ProofOfVisitAttachmentFile: "https://picsum.photos/seed/loanservice/900/1600",
 		},
 	}
 
-	if err := db.Clauses(clause.OnConflict{DoNothing: true}).Model(&models.Loan{}).Create(&loans).Error; err != nil {
+	if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&loans).Error; err != nil {
 		panic(fmt.Errorf("cannot bulk insert loans: %v", err))
 	}
 
