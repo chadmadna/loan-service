@@ -81,7 +81,6 @@ func main() {
 	do.Provide[models.UserUsecase](injector, func(i *do.Injector) (models.UserUsecase, error) {
 		return usersModule.NewUserUsecase(
 			do.MustInvoke[models.UserRepository](i),
-			do.MustInvoke[models.LoanUsecase](i),
 		), nil
 	})
 

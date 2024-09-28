@@ -45,24 +45,6 @@ func (r *repository) FetchUsers(ctx context.Context, allowedRoles []auth.RoleTyp
 	var results []models.User
 	var userIDs []uint
 
-	if len(allowedLoanIDs) > 0 {
-		var loans []models.Loan
-		err := r.db.WithContext(ctx).Model(&models.Loan{}).Where("id IN (?)", allowedLoanIDs).
-			Preload("Borrower", "role_type = ?", auth.RoleTypeBorrower).
-			Preload("Investors", "role_type = ?", auth.RoleTypeInvestor).
-			Find(&loans).Error
-		if err != nil {
-			return nil, err
-		}
-
-		for _, loan := range loans {
-			userIDs = append(userIDs, loan.BorrowerID)
-			for _, investor := range loan.Investors {
-				userIDs = append(userIDs, investor.ID)
-			}
-		}
-	}
-
 	err := r.db.WithContext(ctx).Model(&models.User{}).Where("role_type IN (?) AND id IN (?)", allowedRoles, userIDs).Find(&results).Error
 	if err != nil {
 		return nil, err

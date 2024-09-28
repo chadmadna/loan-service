@@ -14,8 +14,7 @@ import (
 )
 
 type usecase struct {
-	repo        models.UserRepository
-	loanUsecase models.LoanUsecase
+	repo models.UserRepository
 }
 
 // FetchUserByID implements models.UserUsecase.
@@ -31,7 +30,6 @@ func (u *usecase) FetchUserByID(ctx context.Context, userID uint) (*models.User,
 // ViewUsers implements models.UserUsecase.
 func (u *usecase) ViewUsers(ctx context.Context, opts models.ViewUsersOpt) ([]models.User, error) {
 	var allowedRoles []auth.RoleType
-	var allowedLoans []models.Loan
 
 	role, err := u.repo.FetchRoleByRoleType(ctx, opts.RoleType)
 	if err != nil {
@@ -45,26 +43,13 @@ func (u *usecase) ViewUsers(ctx context.Context, opts models.ViewUsersOpt) ([]mo
 		allowedRoles = []auth.RoleType{auth.RoleTypeInvestor, auth.RoleTypeFieldValidator, auth.RoleTypeBorrower}
 	case auth.RoleTypeFieldValidator:
 		allowedRoles = []auth.RoleType{auth.RoleTypeStaff, auth.RoleTypeBorrower}
-		allowedLoans, err = u.loanUsecase.FetchLoansByUserID(ctx, opts.UserID)
-		if err != nil {
-			return nil, errs.Wrap(err)
-		}
 	case auth.RoleTypeInvestor:
-		allowedRoles = []auth.RoleType{auth.RoleTypeStaff, auth.RoleTypeBorrower}
-		allowedLoans, err = u.loanUsecase.FetchLoansByUserID(ctx, opts.UserID)
-		if err != nil {
-			return nil, errs.Wrap(err)
-		}
+		allowedRoles = []auth.RoleType{auth.RoleTypeBorrower}
 	default:
 		return nil, ErrUnauthorized
 	}
 
-	var loanIDs []uint
-	for _, loan := range allowedLoans {
-		loanIDs = append(loanIDs, loan.ID)
-	}
-
-	results, err := u.repo.FetchUsers(ctx, allowedRoles, loanIDs)
+	results, err := u.repo.FetchUsers(ctx, allowedRoles, nil)
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}
@@ -137,6 +122,6 @@ func (u *usecase) UpdateProfile(ctx context.Context, user *models.User) error {
 	panic("unimplemented")
 }
 
-func NewUserUsecase(repo models.UserRepository, loanUsecase models.LoanUsecase) models.UserUsecase {
-	return &usecase{repo, loanUsecase}
+func NewUserUsecase(repo models.UserRepository) models.UserUsecase {
+	return &usecase{repo}
 }
