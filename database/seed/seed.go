@@ -17,20 +17,23 @@ func main() {
 	// Load env variables
 	err := config.LoadFromEnv()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	db, err := database.GetDB()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
-	db.AutoMigrate(
+	err = db.AutoMigrate(
 		&models.Role{},
 		&models.User{},
 		// &models.Product{},
 		&models.Loan{},
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	roles := []models.Role{
 		{Model: gorm.Model{ID: 1}, Name: "Superuser", RoleType: auth.RoleTypeSuperuser},
