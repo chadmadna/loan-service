@@ -123,19 +123,13 @@ func (u *usecase) InvestInLoan(ctx context.Context, loan *models.Loan, investor 
 	for _, investor := range loan.Investors {
 		func(loan *models.Loan, investor *models.User) {
 			eg.Go(func() error {
-				investorID := investor.ID
-				totalInvestedAmount, err := u.repo.GetTotalInvestedAmount(egCtx, &investorID)
-				if err != nil {
-					return errs.Wrap(err)
-				}
-
 				// TODO: Generate an actual loan agreement PDF letter for attachment
 				file, err := os.Open("public/loan-agreement-letter.pdf")
 				if err != nil {
 					return errs.Wrap(err)
 				}
 
-				err = investor.NotifyEmailLoanFunded(egCtx, u.emailService, loan, totalInvestedAmount, file)
+				err = investor.NotifyEmailLoanFunded(egCtx, u.emailService, loan, file)
 				if err != nil {
 					return errs.Wrap(err)
 				}

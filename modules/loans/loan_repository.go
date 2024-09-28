@@ -64,7 +64,14 @@ func (r *repository) FetchLoans(ctx context.Context, opts models.FetchLoanOpts) 
 // FetchLoanByID implements models.LoanRepository.
 func (r *repository) FetchLoanByID(ctx context.Context, loanID uint) (*models.Loan, error) {
 	var result *models.Loan
-	err := r.db.WithContext(ctx).Model(&models.Loan{}).Where("id = ?", loanID).First(&result).Error
+	err := r.db.WithContext(ctx).Model(&models.Loan{}).
+		Preload("Borrower").
+		Preload("Investors").
+		Preload("Product").
+		Preload("Visitor").
+		Preload("Approver").
+		Preload("Disburser").
+		Where("id = ?", loanID).First(&result).Error
 	if err != nil {
 		return nil, err
 	}

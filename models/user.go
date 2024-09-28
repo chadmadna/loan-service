@@ -45,18 +45,17 @@ func (u *User) SetNewPassword(passwordString string) {
 }
 
 // Notify investor by email when loan is fully invested
-func (u *User) NotifyEmailLoanFunded(ctx context.Context, emailService email.EmailService, loan *Loan, totalInvested float64, attachment *os.File) error {
+func (u *User) NotifyEmailLoanFunded(ctx context.Context, emailService email.EmailService, loan *Loan, attachment *os.File) error {
 	subject := "Loan has been fully funded!"
 	body := fmt.Sprintf(`
 			<h1>A loan you financed has been fully funded!</h1>
-			<p>You've invested Rp %.2f into "%s", a loan requested by %s.</p>
+			<p>You've invested in "%s", a loan requested by %s.</p>
 			<p>We're proud to let you know that the loan has been fully funded. Thank you for your contribution!.</p>
 			<p>They will now receive the full amount of Rp %s once it has been disbursed by our staff.</p>
-			<strong>You will earn Rp %s total interest, that's %s%% return on investment.</strong>
 			<p>Attached is the loan agreement letter to sign.</p>
 			<p>Thank you for trusting LoanService.io!</p>
 		`,
-		totalInvested, loan.Name, loan.Borrower.Name, loan.PrincipalAmount, loan.TotalInterest, loan.ROI,
+		loan.Name, loan.Borrower.Name, loan.PrincipalAmount,
 	)
 
 	err := emailService.SendMail(
