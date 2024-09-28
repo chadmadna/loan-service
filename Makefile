@@ -1,4 +1,4 @@
-.PHONY: test
+.PHONY: test build
 
 ifeq ("$(wildcard .env)","")
     $(shell cp env.sample .env)
@@ -62,6 +62,11 @@ dep:
 	@go mod tidy
 	@go mod download
 
+seed-db:
+	@DB_HOST=$(LOCAL_DB_HOST) DB_PORT=$(LOCAL_DB_PORT) DB_NAME=$(DB_NAME) \
+		DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) \
+		go run database/seed/seed.go
+
 build:
 	@go mod tidy
 	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o ./build/web ./app/web/
@@ -69,9 +74,6 @@ build:
 run: dep build
 run:
 	@docker-compose up --build
-
-configure:
-	@go run misc/scaffolding/scaffolding.go
 
 test:
 	@go test ./... --short -cover

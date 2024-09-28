@@ -29,7 +29,7 @@ func GetDB() (*gorm.DB, error) {
 			db, connErr = gorm.Open(postgres.Open(dsn), nil)
 			return connErr
 		},
-		retry.DelayType(retry.FixedDelay),
+		retry.DelayType(retry.BackOffDelay),
 		retry.Delay(1*time.Second),
 	)
 	if err != nil {

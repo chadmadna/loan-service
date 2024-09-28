@@ -10,6 +10,6 @@ type repository struct {
 	db *gorm.DB
 }
 
-func NewLoansRepository(db *gorm.DB) models.LoanRepository {
+func NewLoanRepository(db *gorm.DB) models.LoanRepository {
 	return &repository{db}
 }

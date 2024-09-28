@@ -74,6 +74,6 @@ func (u *usecase) UpdateProfile(user *models.User) error {
 	panic("unimplemented")
 }
 
-func NewUsersUsecase(repo models.UserRepository, loanUsecase models.LoanUsecase) models.UserUsecase {
+func NewUserUsecase(repo models.UserRepository, loanUsecase models.LoanUsecase) models.UserUsecase {
 	return &usecase{repo, loanUsecase}
 }

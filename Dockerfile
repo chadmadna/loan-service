@@ -10,7 +10,7 @@ RUN apk update && apk add --no-cache bash wget make \
 WORKDIR /app
 
 # Copy all files over to contianer
-COPY web /app/web
+COPY /build/web /app/web
 COPY .env /app/.env
 
 EXPOSE 8080

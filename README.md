@@ -10,11 +10,11 @@ Practice for creating a loan service. Create loans from available loan products,
 ## Quickstart
 - Download Go deps and other dependencies `make dep` and `make setup`
 - Fill in `.env` by copying from defaults `env.sample`
-- Seed database with initial data (users, roles, loan products, loans) `make setup`
 - Register additional users (borrowers and investors) `make register-user`
 - Build Go app with `make build` before running via Docker
 - Run service as multi-container with docker-compose.yml `make run`
-- App runs on `localhost:8080` by default, with Postgres in `localhost:5555`
+- Seed database with initial data (users, roles, loan products, loans) `make seed-db`
+- App runs on `localhost:8080` by default, with Postgres in `localhost:5432`
 
 ## Definition
 The term loan refers to a type of credit vehicle in which a sum of money is lent to another party in exchange for future repayment of the value or principal amount. In many cases, the lender also adds interest or finance charges to the principal value, which the borrower must repay in addition to the principal balance.
@@ -40,9 +40,9 @@ Under assumption, there are 4 main types of users:
 
 All users can log in, edit their profile, and log out.
 - For simplicity purposes, let's assume that registration is out of scope, and the following users are already registered in the system:
-    - 1 superuser (admin@loanservice.io)
-    - 1 staff (staff@loanservice.io)
-    - 1 field validator (field.validator@loanservice.io)
+    - 1 superuser (user: `admin@loanservice.io`, pass: `@admin`)
+    - 1 staff (user: `staff@loanservice.io`, pass: `@staff`)
+    - 1 field validator (user: `field.validator@loanservice.io`, pass: `@field.validator`)
 - Additional users with custom emails can be registered by executing `make register-user`. See the [Quickstart](#quickstart) section for more details.
 
 ### Loans

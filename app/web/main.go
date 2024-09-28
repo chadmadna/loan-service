@@ -1,11 +1,13 @@
 package main
 
 import (
+	"fmt"
 	authMiddleware "loan-service/app/web/middleware"
 	"loan-service/config"
 	"loan-service/database"
 	"loan-service/models"
 	loansModule "loan-service/modules/loans"
+	usersModule "loan-service/modules/users"
 	"loan-service/services/email"
 	"loan-service/utils/resp"
 	"loan-service/utils/tern"
@@ -29,7 +31,7 @@ func main() {
 
 	// Load env variables
 	envPath := tern.String(os.Getenv("ENV_PATH"), ".env")
-	err := config.Load(envPath)
+	err := config.LoadFromFile(envPath)
 	if err != nil {
 		panic(err)
 	}
@@ -55,12 +57,24 @@ func main() {
 
 	// Loans module
 	do.Provide[models.LoanRepository](injector, func(i *do.Injector) (models.LoanRepository, error) {
-		return loansModule.NewLoansRepository(db), nil
+		return loansModule.NewLoanRepository(db), nil
 	})
 
 	do.Provide[models.LoanUsecase](injector, func(i *do.Injector) (models.LoanUsecase, error) {
-		return loansModule.NewLoansUsecase(
+		return loansModule.NewLoanUsecase(
 			do.MustInvoke[models.LoanRepository](i),
+		), nil
+	})
+
+	// Users module
+	do.Provide[models.UserRepository](injector, func(i *do.Injector) (models.UserRepository, error) {
+		return usersModule.NewUserRepository(db), nil
+	})
+
+	do.Provide[models.UserUsecase](injector, func(i *do.Injector) (models.UserUsecase, error) {
+		return usersModule.NewUserUsecase(
+			do.MustInvoke[models.UserRepository](i),
+			do.MustInvoke[models.LoanUsecase](i),
 		), nil
 	})
 
@@ -97,6 +111,9 @@ func main() {
 
 	// Register endpoints for each group
 	_userHandlers.NewCommonUsersHandler(mainGroup, do.MustInvoke[models.UserUsecase](injector))
+
+	// Start server
+	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", config.Data.AppPort)))
 }
 
 func httpErrorHandler(err error, c echo.Context) {

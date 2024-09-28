@@ -86,6 +86,6 @@ func (r *repository) FetchRoleByRoleType(roleType auth.RoleType) (*models.Role, 
 	return role, nil
 }
 
-func NewUsersRepository(db *gorm.DB) models.UserRepository {
+func NewUserRepository(db *gorm.DB) models.UserRepository {
 	return &repository{db}
 }

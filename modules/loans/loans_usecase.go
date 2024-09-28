@@ -14,6 +14,6 @@ func (u *usecase) FetchLoansByUserID(userID uint, roleType auth.RoleType) ([]mod
 	panic("unimplemented")
 }
 
-func NewLoansUsecase(repo models.LoanRepository) models.LoanUsecase {
+func NewLoanUsecase(repo models.LoanRepository) models.LoanUsecase {
 	return &usecase{repo}
 }
