@@ -6,6 +6,7 @@ import (
 	database "loan-service/database"
 	"loan-service/models"
 	"loan-service/services/auth"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -28,11 +29,40 @@ func main() {
 	err = db.AutoMigrate(
 		&models.Role{},
 		&models.User{},
-		// &models.Product{},
+		&models.Product{},
 		&models.Loan{},
+		&models.Investment{},
 	)
 	if err != nil {
 		panic(err)
+	}
+
+	products := []models.Product{
+		{
+			Model:           gorm.Model{ID: 1},
+			Name:            "Dana Fleksibel",
+			PrincipalAmount: "20000000.0",
+			InterestRate:    0.1,
+			Term:            models.TermLength3Month,
+		},
+		{
+			Model:           gorm.Model{ID: 2},
+			Name:            "Dana Sejahtera",
+			PrincipalAmount: "10000000.0",
+			InterestRate:    0.08,
+			Term:            models.TermLength6Month,
+		},
+		{
+			Model:           gorm.Model{ID: 3},
+			Name:            "Dana Usaha",
+			PrincipalAmount: "100000000.0",
+			InterestRate:    0.06942,
+			Term:            models.TermLength12Month,
+		},
+	}
+
+	if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&products).Error; err != nil {
+		panic(fmt.Errorf("cannot bulk insert products: %v", err))
 	}
 
 	roles := []models.Role{
@@ -49,6 +79,7 @@ func main() {
 
 	users := []models.User{
 		{
+			Model:    gorm.Model{ID: 1},
 			Name:     "Angela Merkel",
 			Email:    "admin@loanservice.io",
 			Password: "@superuser",
@@ -56,6 +87,7 @@ func main() {
 			RoleID:   1,
 		},
 		{
+			Model:    gorm.Model{ID: 2},
 			Name:     "Emmanuel Macron",
 			Email:    "staff@loanservice.io",
 			Password: "@staff",
@@ -63,6 +95,7 @@ func main() {
 			RoleID:   2,
 		},
 		{
+			Model:    gorm.Model{ID: 3},
 			Name:     "Silvio Berlusconi",
 			Email:    "field.validator@loanservice.io",
 			Password: "@field.validator",
@@ -70,6 +103,7 @@ func main() {
 			RoleID:   3,
 		},
 		{
+			Model:    gorm.Model{ID: 4},
 			Name:     "Larry Fink",
 			Email:    "larryfink@blackrock.com",
 			Password: "larry@investor",
@@ -77,6 +111,7 @@ func main() {
 			RoleID:   4,
 		},
 		{
+			Model:    gorm.Model{ID: 5},
 			Name:     "Luke Sarsfield",
 			Email:    "lukesarsfield@goldmansachs.com",
 			Password: "luke@investor",
@@ -84,6 +119,15 @@ func main() {
 			RoleID:   4,
 		},
 		{
+			Model:    gorm.Model{ID: 6},
+			Name:     "George Soros",
+			Email:    "georgesoros@sorosfund.com",
+			Password: "george@investor",
+			IsActive: true,
+			RoleID:   4,
+		},
+		{
+			Model:    gorm.Model{ID: 7},
 			Name:     "Zulhas Hasan",
 			Email:    "zulhashasan@indonesia.go.id",
 			Password: "zulhas@borrower",
@@ -98,5 +142,47 @@ func main() {
 
 	if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&users).Error; err != nil {
 		panic(fmt.Errorf("cannot bulk insert users: %v", err))
+	}
+
+	// Use map to avoid inserting empty values
+	loans := []map[string]any{
+		{
+			"ID":                         1,
+			"CreatedAt":                  time.Now(),
+			"UpdatedAt":                  time.Now(),
+			"Name":                       "Foreign investment for ada deh",
+			"Status":                     models.LoanStatusApproved,
+			"BorrowerID":                 7,
+			"ProductID":                  3,
+			"PrincipalAmount":            "100000000.0",
+			"InterestRate":               0.06942,
+			"TotalInterest":              "6942000.0",
+			"ROI":                        "6.94",
+			"LoanTerm":                   int(models.TermLength12Month),
+			"VisitorID":                  3,
+			"ApproverID":                 2,
+			"ProofOfVisitAttachmentFile": "https://picsum.photos/seed/loanservice/900/1600",
+		},
+	}
+
+	if err := db.Clauses(clause.OnConflict{DoNothing: true}).Model(&models.Loan{}).Create(&loans).Error; err != nil {
+		panic(fmt.Errorf("cannot bulk insert loans: %v", err))
+	}
+
+	investments := []models.Investment{
+		{
+			InvestorID: 6,
+			LoanID:     1,
+			Amount:     "60000000",
+		},
+		{
+			InvestorID: 5,
+			LoanID:     1,
+			Amount:     "25000000",
+		},
+	}
+
+	if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&investments).Error; err != nil {
+		panic(fmt.Errorf("cannot bulk insert investments: %v", err))
 	}
 }

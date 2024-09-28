@@ -22,7 +22,9 @@ type Config struct {
 
 	AppSecret string `env:"APP_SECRET" env-required:"true"`
 
-	EmailSendGridAPIKey string `env:"EMAIL_SENDGRID_API_KEY" env-required:"true"`
+	EmailSendGridAPIKey  string `env:"EMAIL_SENDGRID_API_KEY" env-required:"true"`
+	DefaultSenderAddress string `env:"DEFAULT_SENDER_ADDRESS" env-required:"true"`
+	DefaultSenderName    string `env:"DEFAULT_SENDER_NAME" env-required:"true"`
 }
 
 var (

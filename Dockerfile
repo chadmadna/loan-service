@@ -9,6 +9,7 @@ WORKDIR /app
 # Copy all files over to contianer
 COPY /build/web /app/web
 COPY .env /app/.env
+COPY /public /app/public
 
 EXPOSE 8080
 

@@ -18,6 +18,16 @@ type usecase struct {
 	loanUsecase models.LoanUsecase
 }
 
+// FetchUserByID implements models.UserUsecase.
+func (u *usecase) FetchUserByID(ctx context.Context, userID uint) (*models.User, error) {
+	user, err := u.repo.FetchUserByID(ctx, userID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errs.Wrap(err)
+	}
+
+	return user, nil
+}
+
 // ViewUsers implements models.UserUsecase.
 func (u *usecase) ViewUsers(ctx context.Context, opts models.ViewUsersOpt) ([]models.User, error) {
 	var allowedRoles []auth.RoleType
@@ -35,12 +45,16 @@ func (u *usecase) ViewUsers(ctx context.Context, opts models.ViewUsersOpt) ([]mo
 		allowedRoles = []auth.RoleType{auth.RoleTypeInvestor, auth.RoleTypeFieldValidator, auth.RoleTypeBorrower}
 	case auth.RoleTypeFieldValidator:
 		allowedRoles = []auth.RoleType{auth.RoleTypeStaff, auth.RoleTypeBorrower}
-		allowedLoans, err = u.loanUsecase.FetchLoansByUserID(opts.UserID, role.RoleType)
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		allowedLoans, err = u.loanUsecase.FetchLoansByUserID(ctx, opts.UserID)
+		if err != nil {
 			return nil, errs.Wrap(err)
 		}
 	case auth.RoleTypeInvestor:
 		allowedRoles = []auth.RoleType{auth.RoleTypeStaff, auth.RoleTypeBorrower}
+		allowedLoans, err = u.loanUsecase.FetchLoansByUserID(ctx, opts.UserID)
+		if err != nil {
+			return nil, errs.Wrap(err)
+		}
 	default:
 		return nil, ErrUnauthorized
 	}

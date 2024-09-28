@@ -8,22 +8,22 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type CommonUsersHandler struct {
+type CommonUserHandler struct {
 	Usecase models.UserUsecase
 }
 
-func NewCommonUsersHandler(
+func NewCommonUserHandler(
 	e *echo.Echo,
 	uc models.UserUsecase,
 	jwtAuthMiddleware echo.MiddlewareFunc,
 ) {
-	handler := &CommonUsersHandler{uc}
+	handler := &CommonUserHandler{uc}
 
 	e.POST("/login", handler.Login)
 	e.POST("/logout", handler.Logout, jwtAuthMiddleware)
 }
 
-func (h *CommonUsersHandler) Login(c echo.Context) error {
+func (h *CommonUserHandler) Login(c echo.Context) error {
 	reqCtx := c.Request().Context()
 
 	email, password, ok := c.Request().BasicAuth()
@@ -42,7 +42,7 @@ func (h *CommonUsersHandler) Login(c echo.Context) error {
 	return resp.HTTPOk(c, res)
 }
 
-func (h *CommonUsersHandler) Logout(c echo.Context) error {
+func (h *CommonUserHandler) Logout(c echo.Context) error {
 	_, ok := c.Get(auth.AuthClaimsCtxKey).(auth.AuthClaims)
 	if !ok {
 		return resp.HTTPUnauthorized(c)

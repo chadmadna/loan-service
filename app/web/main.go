@@ -8,14 +8,17 @@ import (
 	"loan-service/models"
 	loansModule "loan-service/modules/loans"
 	usersModule "loan-service/modules/users"
+	"loan-service/services/auth"
 	"loan-service/services/email"
 	"loan-service/utils/resp"
 	"loan-service/utils/tern"
 	"net/http"
 	"os"
 
+	_loanHandlers "loan-service/modules/loans/handlers"
 	_userHandlers "loan-service/modules/users/handlers"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	_log "github.com/labstack/gommon/log"
@@ -52,7 +55,9 @@ func main() {
 
 	// Services
 	do.Provide[email.EmailService](injector, func(i *do.Injector) (email.EmailService, error) {
-		return email.NewEmailService(config.Data.EmailSendGridAPIKey), nil
+		return email.NewEmailService(
+			config.Data.EmailSendGridAPIKey, config.Data.DefaultSenderAddress, config.Data.DefaultSenderName,
+		), nil
 	})
 
 	// Loans module
@@ -63,6 +68,8 @@ func main() {
 	do.Provide[models.LoanUsecase](injector, func(i *do.Injector) (models.LoanUsecase, error) {
 		return loansModule.NewLoanUsecase(
 			do.MustInvoke[models.LoanRepository](i),
+			do.MustInvoke[models.UserUsecase](i),
+			do.MustInvoke[email.EmailService](injector),
 		), nil
 	})
 
@@ -83,6 +90,7 @@ func main() {
 	e.HTTPErrorHandler = httpErrorHandler
 	e.HideBanner = true
 	e.Logger.SetLevel(_log.DEBUG)
+	e.Validator = &CustomValidator{validator: validator.New()}
 
 	e.Pre(middleware.RemoveTrailingSlash())
 
@@ -96,16 +104,16 @@ func main() {
 	)))
 
 	// Register router groups
-	// mg := e.Group("/", authMiddleware.JWTAuth(do.MustInvoke[models.UserRepository](injector)))
+	mg := e.Group("/app", authMiddleware.JWTAuth(do.MustInvoke[models.UserRepository](injector)))
 	// staffGroup := mg.Group("/admin", authMiddleware.AllowOnlyRoles(
 	// 	auth.RoleTypeSuperuser, auth.RoleTypeStaff,
 	// ))
 	// fieldValidatorGroup := mg.Group("/field-validation", authMiddleware.AllowOnlyRoles(
 	// 	auth.RoleTypeSuperuser, auth.RoleTypeStaff, auth.RoleTypeFieldValidator,
 	// ))
-	// investorGroup := mg.Group("/invest", authMiddleware.AllowOnlyRoles(
-	// 	auth.RoleTypeSuperuser, auth.RoleTypeInvestor,
-	// ))
+	investorGroup := mg.Group("/invest", authMiddleware.AllowOnlyRoles(
+		auth.RoleTypeSuperuser, auth.RoleTypeInvestor,
+	))
 	// borrowGroup := mg.Group("/user", authMiddleware.AllowOnlyRoles(
 	// 	auth.RoleTypeSuperuser, auth.RoleTypeBorrower,
 	// ))
@@ -116,14 +124,28 @@ func main() {
 	})
 
 	// Register endpoints for each group
-	_userHandlers.NewCommonUsersHandler(
+	_userHandlers.NewCommonUserHandler(
 		e,
 		do.MustInvoke[models.UserUsecase](injector),
 		authMiddleware.JWTAuth(do.MustInvoke[models.UserRepository](injector)),
 	)
 
+	_loanHandlers.NewInvestorHandler(
+		investorGroup, // lol
+		do.MustInvoke[models.LoanUsecase](injector),
+		do.MustInvoke[models.UserUsecase](injector),
+	)
+
 	// Start server
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", config.Data.AppPort)))
+}
+
+type CustomValidator struct {
+	validator *validator.Validate
+}
+
+func (cv *CustomValidator) Validate(i interface{}) error {
+	return cv.validator.Struct(i)
 }
 
 func httpErrorHandler(err error, c echo.Context) {

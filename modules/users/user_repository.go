@@ -30,7 +30,7 @@ func (r *repository) CreateUser(ctx context.Context, user *models.User) error {
 }
 
 // FetchUser implements models.UserRepository.
-func (r *repository) FetchUser(ctx context.Context, userID uint) (*models.User, error) {
+func (r *repository) FetchUserByID(ctx context.Context, userID uint) (*models.User, error) {
 	var result *models.User
 	err := r.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", userID).First(&result).Error
 	if err != nil {

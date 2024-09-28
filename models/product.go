@@ -6,11 +6,21 @@ import (
 	"gorm.io/gorm"
 )
 
+type TermLength int
+
+const (
+	TermLength1Month  TermLength = 1
+	TermLength3Month  TermLength = 3
+	TermLength6Month  TermLength = 6
+	TermLength12Month TermLength = 12
+)
+
 type Product struct {
 	gorm.Model
-	PrincipalAmount string  `json:"principal_amount"`
-	InterestRate    float64 `json:"interest_rate"`
-	Term            int     `json:"term"` // in months
+	Name            string     `json:"name"`
+	PrincipalAmount string     `json:"principal_amount"`
+	InterestRate    float64    `json:"interest_rate"`
+	Term            TermLength `json:"term"` // in months
 }
 
 func (Product) TableName() string {

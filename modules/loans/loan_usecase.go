@@ -1,19 +1,164 @@
 package loans
 
 import (
+	"context"
+	"errors"
 	"loan-service/models"
 	"loan-service/services/auth"
+	"loan-service/services/email"
+	"loan-service/utils/errs"
+	"os"
+
+	"golang.org/x/sync/errgroup"
+	"gorm.io/gorm"
 )
 
 type usecase struct {
-	repo models.LoanRepository
+	repo         models.LoanRepository
+	userUsecase  models.UserUsecase
+	emailService email.EmailService
+}
+
+// FetchLoanByID implements models.LoanUsecase.
+func (u *usecase) FetchLoanByID(ctx context.Context, loanID uint) (*models.Loan, error) {
+	loan, err := u.repo.FetchLoanByID(ctx, loanID)
+	if err != nil {
+		return nil, errs.Wrap(err)
+	}
+
+	return loan, nil
+}
+
+// FetchLoans implements models.LoanUsecase.
+func (u *usecase) FetchLoans(ctx context.Context, opts models.FetchLoanOpts) ([]models.Loan, error) {
+	if opts.UserID > 0 {
+		user, err := u.userUsecase.FetchUserByID(ctx, opts.UserID)
+		if err != nil {
+			return nil, errs.Wrap(err)
+		}
+
+		if user == nil {
+			return nil, errs.Wrap(ErrUserNotFound)
+		}
+	}
+
+	loans, err := u.repo.FetchLoans(ctx, opts)
+	if err != nil {
+		return nil, errs.Wrap(err)
+	}
+
+	return loans, nil
 }
 
 // FetchLoansByUserID implements models.LoanUsecase.
-func (u *usecase) FetchLoansByUserID(userID uint, roleType auth.RoleType) ([]models.Loan, error) {
+func (u *usecase) FetchLoansByUserID(ctx context.Context, userID uint) ([]models.Loan, error) {
+	user, err := u.userUsecase.FetchUserByID(ctx, userID)
+	if err != nil {
+		return nil, errs.Wrap(err)
+	}
+
+	if user == nil {
+		return nil, nil
+	}
+
+	var loans []models.Loan
+	if user.Role.RoleType == auth.RoleTypeBorrower {
+		loans = append(loans, user.BorrowedLoans...)
+	}
+
+	if user.Role.RoleType == auth.RoleTypeInvestor {
+		loans = append(loans, user.InvestedLoans...)
+	}
+
+	if user.Role.RoleType == auth.RoleTypeFieldValidator {
+		loans, err = u.repo.FetchLoans(ctx, models.FetchLoanOpts{})
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errs.Wrap(err)
+		}
+	}
+
+	return loans, nil
+}
+
+// StartLoan implements models.LoanUsecase.
+func (u *usecase) StartLoan(ctx context.Context, product *models.Product, borrower *models.User) error {
 	panic("unimplemented")
 }
 
-func NewLoanUsecase(repo models.LoanRepository) models.LoanUsecase {
-	return &usecase{repo}
+// MarkLoanBorrowerVisited implements models.LoanUsecase.
+func (u *usecase) MarkLoanBorrowerVisited(ctx context.Context, loan *models.Loan, visitor *models.User, attachment *os.File) error {
+	if loan.Status != models.LoanStatusProposed {
+		return models.NewInvalidStateError(loan.Status, "MarkLoanBorrowerVisited")
+	}
+
+	loan.Visitor = visitor
+	err := u.repo.UpdateLoan(ctx, loan)
+	if err != nil {
+		return errs.Wrap(err)
+	}
+
+	return nil
+}
+
+// ApproveLoan implements models.LoanUsecase.
+func (u *usecase) ApproveLoan(ctx context.Context, loan *models.Loan, approver *models.User) error {
+	loan.Approver = approver
+	err := u.repo.UpdateLoan(ctx, loan)
+	if err != nil {
+		return errs.Wrap(err)
+	}
+
+	return nil
+}
+
+// InvestInLoan implements models.LoanUsecase.
+func (u *usecase) InvestInLoan(ctx context.Context, loan *models.Loan, investor *models.User, amount float64) error {
+	err := u.repo.InvestInLoan(ctx, loan, investor, amount)
+	if err != nil {
+		return errs.Wrap(err)
+	}
+
+	// observer and fan-out pattern
+	eg, egCtx := errgroup.WithContext(ctx)
+	for _, investor := range loan.Investors {
+		func(loan *models.Loan, investor *models.User) {
+			eg.Go(func() error {
+				investorID := investor.ID
+				totalInvestedAmount, err := u.repo.GetTotalInvestedAmount(egCtx, &investorID)
+				if err != nil {
+					return errs.Wrap(err)
+				}
+
+				// TODO: Generate an actual loan agreement PDF letter for attachment
+				file, err := os.Open("public/loan-agreement-letter.pdf")
+				if err != nil {
+					return errs.Wrap(err)
+				}
+
+				err = investor.NotifyEmailLoanFunded(egCtx, u.emailService, loan, totalInvestedAmount, file)
+				if err != nil {
+					return errs.Wrap(err)
+				}
+
+				return nil
+			})
+		}(loan, &investor)
+	}
+
+	return eg.Wait()
+}
+
+// DisburseLoan implements models.LoanUsecase.
+func (u *usecase) DisburseLoan(ctx context.Context, loan *models.Loan, disburser *models.User) error {
+	loan.Disburser = disburser
+	err := u.repo.UpdateLoan(ctx, loan)
+	if err != nil {
+		return errs.Wrap(err)
+	}
+
+	return nil
+}
+
+func NewLoanUsecase(repo models.LoanRepository, userUC models.UserUsecase, emailService email.EmailService) models.LoanUsecase {
+	return &usecase{repo, userUC, emailService}
 }

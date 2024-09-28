@@ -70,7 +70,7 @@ A loan object should consist of the following information:
 - A link to the generated loan agreement letter.
 - *Not listed above, but let's assume we will have additional attributes needed*:
     - Loan term: borrowers can chooses between the predetermined loan periods: 1 month, 3 months, 6 months, and 1 year.
-    - Total interest: Will define the total interest that will be accrued from the loan principal given the interest rate and loan term.
+    - All money is represented in Rupiahs.
 
 ## Non-functional requirements (and assumptions):
 Assume this is an MVP project, and traffic is expected to be low as the application will be subjected to internal user acceptance testing (UAT) before being further developed with production-ready infrastructure.

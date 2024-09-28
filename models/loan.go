@@ -1,32 +1,122 @@
 package models
 
 import (
+	"context"
 	"loan-service/services/auth"
+	"loan-service/utils/money"
+	"os"
 
 	"gorm.io/gorm"
 )
 
+type LoanStatus string
+
+const (
+	LoanStatusProposed  LoanStatus = "proposed"
+	LoanStatusApproved  LoanStatus = "approved"
+	LoanStatusInvested  LoanStatus = "invested"
+	LoanStatusDisbursed LoanStatus = "disbursed"
+)
+
 type Loan struct {
 	gorm.Model
-	BorrowerID              uint    `json:"borrower_id"`
-	Borrower                User    `json:"borrower"`
-	ProductID               uint    `json:"product_id"`
-	Product                 Product `json:"product"`
-	PrincipalAmount         string  `json:"principal_amount"`
-	InterestRate            float64 `json:"interest_rate"`
-	ROI                     string  `json:"roi"`
-	AgreementAttachmentFile string  `json:"agreement_attachment_file"`
-	LoanTerm                int     `json:"loan_term"` // in months
-	TotalInterest           string  `json:"total_interest"`
-	Investors               []User  `json:"investors" gorm:"many2many:loans_investors;foreignKey:ID;joinForeignKey:LoanID;references:ID;joinReferences:InvestorID"` //nolint:lll
+	Name                       string       `json:"name"`
+	Status                     LoanStatus   `json:"status"`
+	BorrowerID                 uint         `json:"borrower_id"`
+	Borrower                   User         `json:"borrower" gorm:"foreignKey:BorrowerID"`
+	ProductID                  uint         `json:"product_id" gorm:"foreignKey:ProductID"`
+	Product                    Product      `json:"product"`
+	PrincipalAmount            string       `json:"principal_amount"`
+	InterestRate               float64      `json:"interest_rate"` // in per annum
+	TotalInterest              string       `json:"total_interest"`
+	ROI                        string       `json:"roi"`
+	LoanTerm                   int          `json:"loan_term"`                                                                                                          // in months
+	Investors                  []User       `json:"investors" gorm:"many2many:investments;foreignKey:ID;joinForeignKey:LoanID;references:ID;joinReferences:InvestorID"` //nolint:lll
+	Investments                []Investment `json:"investments" gorm:"foreignKey:LoanID"`
+	VisitorID                  uint         `json:"visitor_id"`
+	Visitor                    *User        `json:"visitor" gorm:"foreignKey:VisitorID"`
+	ApproverID                 uint         `json:"approver_id"`
+	Approver                   *User        `json:"approver" gorm:"foreignKey:ApproverID"`
+	DisburserID                uint         `json:"disburser_id"`
+	Disburser                  *User        `json:"disburser" gorm:"foreignKey:DisburserID"`
+	ProofOfVisitAttachmentFile string       `json:"proof_of_visit_attachment_file"`
+	AgreementAttachmentFile    string       `json:"agreement_attachment_file"`
 }
 
 func (Loan) TableName() string {
 	return "loans"
 }
 
-type LoanRepository interface{}
+// state machine, state can only move forward
+func (l *Loan) AdvanceState(nextState LoanStatus, action string) error {
+	currentState := l.Status
+	switch nextState {
+	case LoanStatusProposed:
+		return NewNextStateError(currentState, nextState, action)
+	case LoanStatusApproved:
+		requirementsValid := l.VisitorID != 0 && l.ProofOfVisitAttachmentFile != ""
+		if currentState != LoanStatusProposed && requirementsValid {
+			return NewNextStateError(currentState, nextState, action)
+		}
+	case LoanStatusInvested:
+		// still need to make sure in repo that invested amount is exactly the principal amount
+		requirementsValid := l.ApproverID != 0 && len(l.Investors) > 0
+		if currentState != LoanStatusApproved && requirementsValid {
+			return NewNextStateError(currentState, nextState, action)
+		}
+	case LoanStatusDisbursed:
+		requirementsValid := l.DisburserID != 0
+		if currentState != LoanStatusInvested && requirementsValid {
+			return NewNextStateError(currentState, nextState, action)
+		}
+	default:
+		return NewInvalidStateError(nextState, action)
+	}
+
+	l.Status = nextState
+
+	return nil
+}
+
+// factory
+func NewLoan(product *Product, borrower *User, termLength TermLength) *Loan {
+	roi, totalInterest := money.CalculateROI(product.PrincipalAmount, product.InterestRate, int(product.Term))
+
+	return &Loan{
+		ProductID:       product.ID,
+		BorrowerID:      borrower.ID,
+		Status:          LoanStatusProposed,
+		PrincipalAmount: product.PrincipalAmount,
+		InterestRate:    product.InterestRate,
+		LoanTerm:        int(product.Term),
+		ROI:             roi,
+		TotalInterest:   totalInterest,
+	}
+}
+
+type FetchLoanOpts struct {
+	UserID       uint
+	RoleType     auth.RoleType
+	Status       []LoanStatus
+	WithPreloads bool
+}
+
+type LoanRepository interface {
+	FetchLoans(ctx context.Context, opts FetchLoanOpts) ([]Loan, error)
+	FetchLoanByID(ctx context.Context, loanID uint) (*Loan, error)
+	CreateLoan(ctx context.Context, loan *Loan) error
+	UpdateLoan(ctx context.Context, loan *Loan) error
+	InvestInLoan(ctx context.Context, loan *Loan, investor *User, amount float64) error
+	GetTotalInvestedAmount(ctx context.Context, investorID *uint) (float64, error)
+}
 
 type LoanUsecase interface {
-	FetchLoansByUserID(userID uint, roleType auth.RoleType) ([]Loan, error)
+	FetchLoans(ctx context.Context, opts FetchLoanOpts) ([]Loan, error)
+	FetchLoansByUserID(ctx context.Context, userID uint) ([]Loan, error)
+	FetchLoanByID(ctx context.Context, userID uint) (*Loan, error)
+	StartLoan(ctx context.Context, product *Product, borrower *User) error
+	MarkLoanBorrowerVisited(ctx context.Context, loan *Loan, visitor *User, attachment *os.File) error
+	ApproveLoan(ctx context.Context, loan *Loan, approver *User) error
+	InvestInLoan(ctx context.Context, loan *Loan, investor *User, amount float64) error
+	DisburseLoan(ctx context.Context, loan *Loan, disburser *User) error
 }
