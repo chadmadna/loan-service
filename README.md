@@ -10,11 +10,10 @@ Practice for creating a loan service. Create loans from available loan products,
 ## Quickstart
 - Download Go deps and other dependencies `make dep` and `make setup`
 - Fill in `.env` by copying from defaults `env.sample`
-- Register additional users (borrowers and investors) `make register-user`
-- Run in dev mode on Docker with hot reload `make run-dev`
-- Run service as multi-container with docker-compose.yml `make run`
+- Run on Docker with hot reload `make run`
+- Check `database/seed.db` and verify initial data for seeding (uncomment if needed)
 - Seed database with initial data once database is up `make seed-db`
-- App runs on `localhost:8080` by default, with Postgres in `localhost:5432`
+- App runs on `localhost:8080` by default, with Postgres in `localhost:5555`
 - Test by running test database `make run-test-db` in one terminal, and running `make test` in another terminal
 
 ## Definition
@@ -44,7 +43,7 @@ All users can log in, edit their profile, and log out.
     - 1 superuser (user: `admin@loanservice.io`, pass: `@admin`)
     - 1 staff (user: `staff@loanservice.io`, pass: `@staff`)
     - 1 field validator (user: `field.validator@loanservice.io`, pass: `@field.validator`)
-- Additional users with custom emails can be registered by executing `make register-user`. See the [Quickstart](#quickstart) section for more details.
+- Additional users with custom emails can be registered by modifying seed data in `database/seed.go` and running `make seed-db` once database is up. See the [Quickstart](#quickstart) section for more details.
 
 ### Loans
 - A loan can be in the following states: `[proposed, approved, invested, disbursed]`. The state change must move forward in that order.

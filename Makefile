@@ -75,10 +75,6 @@ run: dep build
 run:
 	@DOCKERFILE_PATH=Dockerfile docker-compose up --build
 
-run-dev: dep build
-run-dev:
-	@DOCKERFILE_PATH=Dockerfile.dev docker-compose up --build
-
 run-test-db: # standalone db
 	@docker-compose -f docker-compose.database.yml up --build
 
