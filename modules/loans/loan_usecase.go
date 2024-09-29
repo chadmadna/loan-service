@@ -20,8 +20,8 @@ type usecase struct {
 }
 
 // FetchLoanByID implements models.LoanUsecase.
-func (u *usecase) FetchLoanByID(ctx context.Context, loanID uint) (*models.Loan, error) {
-	loan, err := u.repo.FetchLoanByID(ctx, loanID)
+func (u *usecase) FetchLoanByID(ctx context.Context, loanID uint, opts *models.FetchLoanOpts) (*models.Loan, error) {
+	loan, err := u.repo.FetchLoanByID(ctx, loanID, opts)
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}
@@ -30,9 +30,9 @@ func (u *usecase) FetchLoanByID(ctx context.Context, loanID uint) (*models.Loan,
 }
 
 // FetchLoans implements models.LoanUsecase.
-func (u *usecase) FetchLoans(ctx context.Context, opts models.FetchLoanOpts) ([]models.Loan, error) {
+func (u *usecase) FetchLoans(ctx context.Context, opts *models.FetchLoanOpts) ([]models.Loan, error) {
 	if opts.UserID > 0 {
-		user, err := u.userUsecase.FetchUserByID(ctx, opts.UserID)
+		user, err := u.userUsecase.FetchUserByID(ctx, opts.UserID, nil)
 		if err != nil {
 			return nil, errs.Wrap(err)
 		}
@@ -52,7 +52,7 @@ func (u *usecase) FetchLoans(ctx context.Context, opts models.FetchLoanOpts) ([]
 
 // FetchLoansByUserID implements models.LoanUsecase.
 func (u *usecase) FetchLoansByUserID(ctx context.Context, userID uint) ([]models.Loan, error) {
-	user, err := u.userUsecase.FetchUserByID(ctx, userID)
+	user, err := u.userUsecase.FetchUserByID(ctx, userID, &models.FetchUserByIDOpts{IncludeBorrowedLoans: true})
 	if err != nil {
 		return nil, errs.Wrap(err)
 	}
@@ -71,7 +71,7 @@ func (u *usecase) FetchLoansByUserID(ctx context.Context, userID uint) ([]models
 	}
 
 	if user.Role.RoleType == auth.RoleTypeFieldValidator {
-		loans, err = u.repo.FetchLoans(ctx, models.FetchLoanOpts{})
+		loans, err = u.repo.FetchLoans(ctx, nil)
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errs.Wrap(err)
 		}
@@ -81,8 +81,30 @@ func (u *usecase) FetchLoansByUserID(ctx context.Context, userID uint) ([]models
 }
 
 // StartLoan implements models.LoanUsecase.
-func (u *usecase) StartLoan(ctx context.Context, product *models.Product, borrower *models.User) error {
-	panic("unimplemented")
+func (u *usecase) StartLoan(ctx context.Context, product *models.Product, borrower *models.User) (*models.Loan, error) {
+	if product == nil || borrower == nil {
+		return nil, errs.Wrap(ErrInvalidParams)
+	}
+
+	existingLoans, err := u.repo.FetchLoans(ctx, &models.FetchLoanOpts{
+		UserID:   borrower.ID,
+		RoleType: borrower.Role.RoleType,
+	})
+	if err != nil {
+		return nil, errs.Wrap(err)
+	}
+
+	if len(existingLoans) > 0 {
+		return nil, errs.Wrap(ErrLoanAlreadyExists)
+	}
+
+	loan := models.NewLoan(product, borrower)
+	err = u.repo.CreateLoan(ctx, loan)
+	if err != nil {
+		return nil, errs.Wrap(err)
+	}
+
+	return loan, nil
 }
 
 // MarkLoanBorrowerVisited implements models.LoanUsecase.

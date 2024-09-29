@@ -27,6 +27,7 @@ type Loan struct {
 	ProductID                  uint         `json:"product_id" gorm:"foreignKey:ProductID"`
 	Product                    Product      `json:"product"`
 	PrincipalAmount            string       `json:"principal_amount"`
+	RemainingAmount            string       `json:"remaining_amount"`
 	InterestRate               float64      `json:"interest_rate"` // in per annum
 	TotalInterest              string       `json:"total_interest"`
 	ROI                        string       `json:"roi"`
@@ -79,7 +80,7 @@ func (l *Loan) AdvanceState(nextState LoanStatus, action string) error {
 }
 
 // factory
-func NewLoan(product *Product, borrower *User, termLength TermLength) *Loan {
+func NewLoan(product *Product, borrower *User) *Loan {
 	roi, totalInterest := money.CalculateROI(product.PrincipalAmount, product.InterestRate, int(product.Term))
 
 	return &Loan{
@@ -87,6 +88,7 @@ func NewLoan(product *Product, borrower *User, termLength TermLength) *Loan {
 		BorrowerID:      borrower.ID,
 		Status:          LoanStatusProposed,
 		PrincipalAmount: product.PrincipalAmount,
+		RemainingAmount: product.PrincipalAmount,
 		InterestRate:    product.InterestRate,
 		LoanTerm:        int(product.Term),
 		ROI:             roi,
@@ -102,8 +104,8 @@ type FetchLoanOpts struct {
 }
 
 type LoanRepository interface {
-	FetchLoans(ctx context.Context, opts FetchLoanOpts) ([]Loan, error)
-	FetchLoanByID(ctx context.Context, loanID uint) (*Loan, error)
+	FetchLoans(ctx context.Context, opts *FetchLoanOpts) ([]Loan, error)
+	FetchLoanByID(ctx context.Context, loanID uint, opts *FetchLoanOpts) (*Loan, error)
 	CreateLoan(ctx context.Context, loan *Loan) error
 	UpdateLoan(ctx context.Context, loan *Loan) error
 	InvestInLoan(ctx context.Context, loan *Loan, investor *User, amount float64) error
@@ -111,10 +113,10 @@ type LoanRepository interface {
 }
 
 type LoanUsecase interface {
-	FetchLoans(ctx context.Context, opts FetchLoanOpts) ([]Loan, error)
+	FetchLoans(ctx context.Context, opts *FetchLoanOpts) ([]Loan, error)
 	FetchLoansByUserID(ctx context.Context, userID uint) ([]Loan, error)
-	FetchLoanByID(ctx context.Context, userID uint) (*Loan, error)
-	StartLoan(ctx context.Context, product *Product, borrower *User) error
+	FetchLoanByID(ctx context.Context, loanID uint, opts *FetchLoanOpts) (*Loan, error)
+	StartLoan(ctx context.Context, product *Product, borrower *User) (*Loan, error)
 	MarkLoanBorrowerVisited(ctx context.Context, loan *Loan, visitor *User, attachment *os.File) error
 	ApproveLoan(ctx context.Context, loan *Loan, approver *User) error
 	InvestInLoan(ctx context.Context, loan *Loan, investor *User, amount float64) error

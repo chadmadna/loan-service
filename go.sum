@@ -1,5 +1,7 @@
 github.com/BurntSushi/toml v1.2.1 h1:9F2/+DoOYIOksmaJFPw1tGFy1eDnIJXg+UHjuD8lTak=
 github.com/BurntSushi/toml v1.2.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
+github.com/Rhymond/go-money v1.0.14 h1:HtdIZ0mP4LrnpN3wdRhsik7pool7x22ILZdDe3moL6E=
+github.com/Rhymond/go-money v1.0.14/go.mod h1:iHvCuIvitxu2JIlAlhF0g9jHqjRSr+rpdOs7Omqlupg=
 github.com/avast/retry-go/v4 v4.0.0 h1:KMkP1DrcCxsyAJ8Ct3XY7W1cpokAxKckuaulkU0PdUs=
 github.com/avast/retry-go/v4 v4.0.0/go.mod h1:cReTsdcgqid2iTuq/VKOyNS00TK1OMMcdcsCt2EF08w=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=

@@ -84,9 +84,13 @@ type ViewUsersOpt struct {
 	UserID   uint
 }
 
+type FetchUserByIDOpts struct {
+	IncludeBorrowedLoans bool
+}
+
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *User) error
-	FetchUserByID(ctx context.Context, userID uint) (*User, error)
+	FetchUserByID(ctx context.Context, userID uint, opts *FetchUserByIDOpts) (*User, error)
 	FetchUsers(ctx context.Context, allowedRoles []auth.RoleType, allowedLoanIDs []uint) ([]User, error)
 	UpdateUser(ctx context.Context, user *User) error
 	FetchRoleByRoleType(ctx context.Context, roleType auth.RoleType) (*Role, error)
@@ -96,7 +100,7 @@ type UserRepository interface {
 type UserUsecase interface {
 	Login(ctx context.Context, email, password string) (LoginResponse, string, string, error)
 	ViewUsers(ctx context.Context, opts ViewUsersOpt) ([]User, error)
-	FetchUserByID(ctx context.Context, userID uint) (*User, error)
+	FetchUserByID(ctx context.Context, userID uint, opts *FetchUserByIDOpts) (*User, error)
 	RegisterUser(ctx context.Context, user *User) error
 	UpdateProfile(ctx context.Context, user *User) error
 }

@@ -10,6 +10,6 @@ var (
 	ErrUnauthorized = errs.GeneralError{
 		StatusCode: http.StatusNotFound,
 		ErrorCode:  "NotFound",
-		Err:        errors.New("resource not found"),
+		Err:        errors.New("Resource not found."),
 	}
 )

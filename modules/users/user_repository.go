@@ -30,9 +30,15 @@ func (r *repository) CreateUser(ctx context.Context, user *models.User) error {
 }
 
 // FetchUser implements models.UserRepository.
-func (r *repository) FetchUserByID(ctx context.Context, userID uint) (*models.User, error) {
+func (r *repository) FetchUserByID(ctx context.Context, userID uint, opts *models.FetchUserByIDOpts) (*models.User, error) {
 	var result *models.User
-	err := r.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", userID).First(&result).Error
+	query := r.db.WithContext(ctx).Model(&models.User{}).Preload("Role")
+
+	if opts != nil && opts.IncludeBorrowedLoans {
+		query = query.Preload("BorrowedLoans")
+	}
+
+	err := query.Where("id = ?", userID).First(&result).Error
 	if err != nil {
 		return nil, err
 	}

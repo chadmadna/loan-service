@@ -29,8 +29,10 @@ func (Product) TableName() string {
 
 type ProductRepository interface {
 	FetchProducts(ctx context.Context) ([]Product, error)
+	FetchProductByID(ctx context.Context, productID uint) (*Product, error)
 }
 
 type ProductUsecase interface {
 	FetchProducts(ctx context.Context) ([]Product, error)
+	FetchProductByID(ctx context.Context, productID uint) (*Product, error)
 }

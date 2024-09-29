@@ -19,11 +19,11 @@ type repository struct {
 
 // FetchLoans implements models.LoanRepository.
 // FetchLoanOpts is for the system to fetch loans associated a certain user according to their role type
-func (r *repository) FetchLoans(ctx context.Context, opts models.FetchLoanOpts) ([]models.Loan, error) {
+func (r *repository) FetchLoans(ctx context.Context, opts *models.FetchLoanOpts) ([]models.Loan, error) {
 	var results []models.Loan
 	query := r.db.WithContext(ctx).Model(&models.Loan{})
 
-	if opts.WithPreloads {
+	if opts != nil && opts.WithPreloads {
 		query = query.Preload("Borrower").
 			Preload("Investors").
 			Preload("Product").
@@ -32,25 +32,12 @@ func (r *repository) FetchLoans(ctx context.Context, opts models.FetchLoanOpts) 
 			Preload("Disburser")
 	}
 
-	if len(opts.Status) > 0 {
+	if opts != nil && len(opts.Status) > 0 {
 		query = query.Where("status IN (?)", opts.Status)
 	}
 
-	if opts.UserID > 0 && opts.RoleType != "" {
-		switch opts.RoleType {
-		// Fetch loans that an investor has funded
-		case auth.RoleTypeInvestor:
-			query = query.Joins("JOIN users ON users.id = ?", opts.UserID).
-				Joins("JOIN roles ON roles.id = users.role_id").
-				Where("roles.role_type = ?", opts.RoleType)
-		// Fetch loans that a field validator has worked on
-		case auth.RoleTypeFieldValidator:
-			query = query.Where("visitor_id = ? OR disburser_id = ?", opts.UserID, opts.UserID)
-		// Fetch loans that a borrower has requested
-		case auth.RoleTypeBorrower:
-			query = query.Where("borrower_id = ?", opts.UserID)
-		default:
-		}
+	if opts != nil && opts.UserID > 0 && opts.RoleType != "" {
+		query = scopeLoanQuery(query, opts.UserID, opts.RoleType)
 	}
 
 	err := query.Find(&results).Error
@@ -62,16 +49,25 @@ func (r *repository) FetchLoans(ctx context.Context, opts models.FetchLoanOpts) 
 }
 
 // FetchLoanByID implements models.LoanRepository.
-func (r *repository) FetchLoanByID(ctx context.Context, loanID uint) (*models.Loan, error) {
+func (r *repository) FetchLoanByID(ctx context.Context, loanID uint, opts *models.FetchLoanOpts) (*models.Loan, error) {
 	var result *models.Loan
-	err := r.db.WithContext(ctx).Model(&models.Loan{}).
+	query := r.db.WithContext(ctx).Model(&models.Loan{}).
 		Preload("Borrower").
 		Preload("Investors").
 		Preload("Product").
 		Preload("Visitor").
 		Preload("Approver").
-		Preload("Disburser").
-		Where("id = ?", loanID).First(&result).Error
+		Preload("Disburser")
+
+	if opts != nil && len(opts.Status) > 0 {
+		query = query.Where("status IN (?)", opts.Status)
+	}
+
+	if opts != nil && opts.UserID > 0 && opts.RoleType != "" {
+		query = scopeLoanQuery(query, opts.UserID, opts.RoleType)
+	}
+
+	err := query.Where("loans.id = ?", loanID).First(&result).Error
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +87,7 @@ func (r *repository) CreateLoan(ctx context.Context, loan *models.Loan) error {
 
 // InvestInLoan implements models.LoanRepository.
 func (r *repository) InvestInLoan(ctx context.Context, loan *models.Loan, investor *models.User, amount float64) error {
-	txErr := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	txErr := r.db.Debug().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Check for existing investments
 		var existingInvestments []models.Investment
 		err := tx.Model(&models.Investment{}).Where("loan_id = ?", loan.ID).Find(&existingInvestments).Error
@@ -134,10 +130,21 @@ func (r *repository) InvestInLoan(ctx context.Context, loan *models.Loan, invest
 			if err := loan.AdvanceState(models.LoanStatusInvested, "InvestInLoan"); err != nil {
 				return errs.Wrap(err)
 			}
+		}
 
-			if err := tx.Model(loan).Save(loan).Error; err != nil {
-				return errs.Wrap(err)
-			}
+		// Update remaining amount
+		remainingAmountFloat, err := strconv.ParseFloat(loan.RemainingAmount, 64)
+		if err != nil {
+			return errs.Wrap(err)
+		}
+		loan.RemainingAmount = fmt.Sprintf("%.2f", remainingAmountFloat-amount)
+
+		// Save loan, update only selected columns
+		if err := tx.Model(loan).Updates(map[string]any{
+			"remaining_amount": loan.RemainingAmount,
+			"status":           loan.Status,
+		}).Error; err != nil {
+			return errs.Wrap(err)
 		}
 
 		return nil
@@ -183,4 +190,22 @@ func (r *repository) UpdateLoan(ctx context.Context, loan *models.Loan) error {
 
 func NewLoanRepository(db *gorm.DB) models.LoanRepository {
 	return &repository{db}
+}
+
+func scopeLoanQuery(query *gorm.DB, userID uint, roleType auth.RoleType) *gorm.DB {
+	switch roleType {
+	// Fetch loans that an investor has funded
+	case auth.RoleTypeInvestor:
+		query = query.Debug().Joins("LEFT JOIN investments ON investments.investor_id = ?", userID).
+			Where("status != ?", models.LoanStatusProposed)
+	// Fetch loans that a field validator has worked on
+	case auth.RoleTypeFieldValidator:
+		query = query.Where("visitor_id = ? OR disburser_id = ?", userID, userID)
+	// Fetch loans that a borrower has requested
+	case auth.RoleTypeBorrower:
+		query = query.Where("borrower_id = ?", userID)
+	default:
+	}
+
+	return query
 }

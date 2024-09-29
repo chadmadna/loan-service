@@ -18,8 +18,8 @@ type usecase struct {
 }
 
 // FetchUserByID implements models.UserUsecase.
-func (u *usecase) FetchUserByID(ctx context.Context, userID uint) (*models.User, error) {
-	user, err := u.repo.FetchUserByID(ctx, userID)
+func (u *usecase) FetchUserByID(ctx context.Context, userID uint, opts *models.FetchUserByIDOpts) (*models.User, error) {
+	user, err := u.repo.FetchUserByID(ctx, userID, opts)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errs.Wrap(err)
 	}

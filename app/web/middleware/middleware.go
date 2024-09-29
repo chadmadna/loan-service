@@ -39,7 +39,7 @@ func JWTAuth(userRepo models.UserRepository) echo.MiddlewareFunc {
 			}
 
 			// Validate user from auth claims
-			_, err = userRepo.FetchUserByID(c.Request().Context(), authClaims.UserID)
+			_, err = userRepo.FetchUserByID(c.Request().Context(), authClaims.UserID, nil)
 			if err != nil {
 				return resp.HTTPUnauthorized(c)
 			}

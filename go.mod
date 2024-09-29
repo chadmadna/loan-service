@@ -5,6 +5,7 @@ go 1.22
 toolchain go1.23.1
 
 require (
+	github.com/Rhymond/go-money v1.0.14
 	github.com/avast/retry-go/v4 v4.0.0
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible

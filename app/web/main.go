@@ -7,6 +7,7 @@ import (
 	"loan-service/database"
 	"loan-service/models"
 	loansModule "loan-service/modules/loans"
+	productsModule "loan-service/modules/products"
 	usersModule "loan-service/modules/users"
 	"loan-service/services/auth"
 	"loan-service/services/email"
@@ -16,6 +17,7 @@ import (
 	"os"
 
 	_loanHandlers "loan-service/modules/loans/handlers"
+	_productHandlers "loan-service/modules/products/handlers"
 	_userHandlers "loan-service/modules/users/handlers"
 
 	"github.com/go-playground/validator/v10"
@@ -57,6 +59,17 @@ func main() {
 	do.Provide[email.EmailService](injector, func(i *do.Injector) (email.EmailService, error) {
 		return email.NewEmailService(
 			config.Data.EmailSendGridAPIKey, config.Data.DefaultSenderAddress, config.Data.DefaultSenderName,
+		), nil
+	})
+
+	// Products module
+	do.Provide[models.ProductRepository](injector, func(i *do.Injector) (models.ProductRepository, error) {
+		return productsModule.NewProductRepository(db), nil
+	})
+
+	do.Provide[models.ProductUsecase](injector, func(i *do.Injector) (models.ProductUsecase, error) {
+		return productsModule.NewProductUsecase(
+			do.MustInvoke[models.ProductRepository](injector),
 		), nil
 	})
 
@@ -104,18 +117,18 @@ func main() {
 
 	// Register router groups
 	mg := e.Group("/app", authMiddleware.JWTAuth(do.MustInvoke[models.UserRepository](injector)))
-	// staffGroup := mg.Group("/admin", authMiddleware.AllowOnlyRoles(
-	// 	auth.RoleTypeSuperuser, auth.RoleTypeStaff,
-	// ))
+	staffGroup := mg.Group("/admin", authMiddleware.AllowOnlyRoles(
+		auth.RoleTypeSuperuser, auth.RoleTypeStaff,
+	))
 	// fieldValidatorGroup := mg.Group("/field-validation", authMiddleware.AllowOnlyRoles(
 	// 	auth.RoleTypeSuperuser, auth.RoleTypeStaff, auth.RoleTypeFieldValidator,
 	// ))
 	investorGroup := mg.Group("/invest", authMiddleware.AllowOnlyRoles(
 		auth.RoleTypeSuperuser, auth.RoleTypeInvestor,
 	))
-	// borrowGroup := mg.Group("/user", authMiddleware.AllowOnlyRoles(
-	// 	auth.RoleTypeSuperuser, auth.RoleTypeBorrower,
-	// ))
+	borrowGroup := mg.Group("/user", authMiddleware.AllowOnlyRoles(
+		auth.RoleTypeSuperuser, auth.RoleTypeBorrower,
+	))
 
 	// Healthcheck
 	e.GET("/ping", func(c echo.Context) error {
@@ -129,10 +142,38 @@ func main() {
 		authMiddleware.JWTAuth(do.MustInvoke[models.UserRepository](injector)),
 	)
 
+	_productHandlers.NewProductHandler(
+		borrowGroup,
+		do.MustInvoke[models.ProductUsecase](injector),
+	)
+
+	do.Provide[*_loanHandlers.CommonLoanHandler](injector, func(i *do.Injector) (*_loanHandlers.CommonLoanHandler, error) {
+		return _loanHandlers.NewCommonLoanHandler(
+			do.MustInvoke[models.LoanUsecase](injector),
+			do.MustInvoke[models.UserUsecase](injector),
+		), nil
+	})
+
+	_loanHandlers.NewStaffHandler(
+		staffGroup,
+		do.MustInvoke[models.LoanUsecase](injector),
+		do.MustInvoke[models.UserUsecase](injector),
+		do.MustInvoke[*_loanHandlers.CommonLoanHandler](injector),
+	)
+
 	_loanHandlers.NewInvestorHandler(
 		investorGroup, // lol
 		do.MustInvoke[models.LoanUsecase](injector),
 		do.MustInvoke[models.UserUsecase](injector),
+		do.MustInvoke[*_loanHandlers.CommonLoanHandler](injector),
+	)
+
+	_loanHandlers.NewBorrowerHandler(
+		borrowGroup,
+		do.MustInvoke[models.LoanUsecase](injector),
+		do.MustInvoke[models.UserUsecase](injector),
+		do.MustInvoke[models.ProductUsecase](injector),
+		do.MustInvoke[*_loanHandlers.CommonLoanHandler](injector),
 	)
 
 	// Start server
