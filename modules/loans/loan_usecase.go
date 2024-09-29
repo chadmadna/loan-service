@@ -11,6 +11,7 @@ import (
 	"loan-service/services/upload"
 	"loan-service/utils/errs"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gabriel-vasile/mimetype"
@@ -173,9 +174,18 @@ func (u *usecase) ApproveLoan(ctx context.Context, loan *models.Loan, approver *
 
 // InvestInLoan implements models.LoanUsecase.
 func (u *usecase) InvestInLoan(ctx context.Context, loan *models.Loan, investor *models.User, amount float64) error {
+	if loan.Status != models.LoanStatusApproved {
+		return ErrLoanNotInvestable
+	}
+
 	err := u.repo.InvestInLoan(ctx, loan, investor, amount)
 	if err != nil {
 		return errs.Wrap(err)
+	}
+
+	remainingAmountFloat, _ := strconv.ParseFloat(loan.RemainingAmount, 64)
+	if remainingAmountFloat > 0 {
+		return nil
 	}
 
 	// observer and fan-out pattern
@@ -204,6 +214,10 @@ func (u *usecase) InvestInLoan(ctx context.Context, loan *models.Loan, investor 
 
 // DisburseLoan implements models.LoanUsecase.
 func (u *usecase) DisburseLoan(ctx context.Context, loan *models.Loan, disburser *models.User) error {
+	if loan.Status != models.LoanStatusInvested {
+		return ErrLoanNotDisbursable
+	}
+
 	loan.Disburser = disburser
 	err := loan.AdvanceState(models.LoanStatusDisbursed, "DisburseLoan")
 	if err != nil {

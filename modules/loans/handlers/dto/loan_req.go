@@ -14,6 +14,10 @@ type MarkLoanBorrowerVisitedRequest struct {
 	LoanID uint `param:"loan_id" validate:"required,gt=0"`
 }
 
+type DisburseLoanRequest struct {
+	LoanID uint `param:"loan_id" validate:"required,gt=0"`
+}
+
 type FetchLoanRequest struct {
 	LoanID uint `param:"loan_id" validate:"required,gt=0"`
 }

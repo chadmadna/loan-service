@@ -25,6 +25,18 @@ var (
 		Err:        errors.New("This loan has already been marked as visited."),
 	}
 
+	ErrLoanNotInvestable = errs.GeneralError{
+		StatusCode: http.StatusBadRequest,
+		ErrorCode:  "LoanNotInvestable",
+		Err:        errors.New("This loan is not in its investing phase."),
+	}
+
+	ErrLoanNotDisbursable = errs.GeneralError{
+		StatusCode: http.StatusBadRequest,
+		ErrorCode:  "LoanNotDisbursable",
+		Err:        errors.New("This loan cannot be disbursed yet."),
+	}
+
 	ErrLoanAlreadyExists = errs.GeneralError{
 		StatusCode: http.StatusBadRequest,
 		ErrorCode:  "LoanAlreadyExists",

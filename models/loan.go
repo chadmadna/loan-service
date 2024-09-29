@@ -56,7 +56,7 @@ func (l *Loan) AdvanceState(nextState LoanStatus, action string) error {
 		return NewNextStateError(currentState, nextState, action)
 	case LoanStatusApproved:
 		requirementsValid := l.VisitorID != nil && l.ProofOfVisitAttachmentFile != ""
-		if currentState != LoanStatusProposed && requirementsValid {
+		if currentState != LoanStatusProposed || !requirementsValid {
 			return NewNextStateError(currentState, nextState, action)
 		}
 	case LoanStatusInvested:
@@ -66,7 +66,7 @@ func (l *Loan) AdvanceState(nextState LoanStatus, action string) error {
 			return NewNextStateError(currentState, nextState, action)
 		}
 	case LoanStatusDisbursed:
-		requirementsValid := l.DisburserID != nil
+		requirementsValid := l.DisburserID == nil
 		if currentState != LoanStatusInvested && requirementsValid {
 			return NewNextStateError(currentState, nextState, action)
 		}

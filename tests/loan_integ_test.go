@@ -134,7 +134,7 @@ func (s *loanIntegrationTestSuite) TestIntegration_StartLoan() {
 			want: `
 				{
 					"data": {
-						"id": 3,
+						"id": 5,
 						"name": "Beli furnitur",
 						"status": "proposed",
 						"principal_amount": "Rp10.000.000,00",
@@ -217,9 +217,9 @@ func (s *loanIntegrationTestSuite) TestIntegration_MarkLoanBorrowerVisited() {
 		},
 		{
 			name:   "throws error given valid request and already visited loan",
-			userID: 8,
+			userID: 9,
 			params: map[string]string{
-				"loan_id": "2",
+				"loan_id": "3",
 			},
 			wantErr: loanModule.ErrLoanAlreadyVisited,
 		},
@@ -246,7 +246,7 @@ func (s *loanIntegrationTestSuite) TestIntegration_MarkLoanBorrowerVisited() {
 			assert.NoError(err)
 			assert.NoError(bodyWriter.Close())
 
-			req := httptest.NewRequest(http.MethodPost, "/loans", body)
+			req := httptest.NewRequest(http.MethodPost, "/loans/:loan_id/visit", body)
 			req.Header.Set(echo.HeaderContentType, bodyWriter.FormDataContentType())
 			rec := httptest.NewRecorder()
 			ctx := s.rest.NewContext(req, rec)
@@ -265,6 +265,225 @@ func (s *loanIntegrationTestSuite) TestIntegration_MarkLoanBorrowerVisited() {
 
 			// Do test and assert
 			err = s.fieldValidatorLoanHandler.MarkLoanBorrowerVisited(ctx)
+			got := strings.TrimSpace(rec.Body.String())
+
+			if tt.wantErr == nil {
+				assert.NoError(err)
+				assert.Equal(http.StatusOK, rec.Code)
+			} else {
+				assert.Contains(got, tt.wantErr.Error())
+			}
+		})
+	}
+}
+
+func (s *loanIntegrationTestSuite) TestIntegration_ApproveLoan() {
+	tests := []struct {
+		name    string
+		userID  uint
+		params  map[string]string
+		wantErr error
+	}{
+		{
+			name:   "returns results given valid request and existing visited loan",
+			userID: 9,
+			params: map[string]string{
+				"loan_id": "2",
+			},
+			wantErr: nil,
+		},
+		{
+			name:   "throws error given valid request and not visited loan",
+			userID: 6,
+			params: map[string]string{
+				"loan_id": "1",
+			},
+			wantErr: models.NewNextStateError(models.LoanStatusProposed, models.LoanStatusApproved, "ApproveLoan"),
+		},
+		{
+			name:    "throws error given invalid request",
+			userID:  7,
+			params:  nil,
+			wantErr: errors.New("invalid request parameters"),
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			assert := _assert.New(s.T())
+
+			// Build request and its context
+			req := httptest.NewRequest(http.MethodPatch, "/loans/:loan_id/approve", nil)
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+			ctx := s.rest.NewContext(req, rec)
+			ctx.Set(auth.AuthClaimsCtxKey, auth.AuthClaims{
+				UserID: uint(tt.userID),
+			})
+
+			for k, v := range tt.params {
+				ctx.SetParamNames(k)
+				ctx.SetParamValues(v)
+			}
+
+			// Do test and assert
+			err := s.staffLoanHandler.ApproveLoan(ctx)
+			got := strings.TrimSpace(rec.Body.String())
+
+			if tt.wantErr == nil {
+				assert.NoError(err)
+				assert.Equal(http.StatusOK, rec.Code)
+			} else {
+				assert.Contains(got, tt.wantErr.Error())
+			}
+		})
+	}
+}
+
+func (s *loanIntegrationTestSuite) TestIntegration_InvestInLoan() {
+	tests := []struct {
+		name    string
+		userID  uint
+		params  map[string]string
+		reqStr  string
+		want    string
+		wantErr error
+	}{
+		{
+			name:   "returns results given valid request and amount, and approved loan",
+			userID: 4,
+			params: map[string]string{
+				"loan_id": "3",
+			},
+			reqStr: `
+				{
+					"amount": 10000000
+				}
+			`,
+			wantErr: nil,
+		},
+		{
+			name:   "throws error given too large amount in request and approved loan",
+			userID: 4,
+			params: map[string]string{
+				"loan_id": "3",
+			},
+			reqStr: `
+				{
+					"amount": 30000000
+				}
+			`,
+			wantErr: loanModule.ErrInvestmentAmountExceedsPrincipal,
+		},
+		{
+			name:   "throws error given valid request and an unapproved loan",
+			userID: 4,
+			params: map[string]string{
+				"loan_id": "1",
+			},
+			reqStr: `
+				{
+					"amount": 15000000
+				}
+			`,
+			wantErr: loanModule.ErrLoanNotInvestable,
+		},
+		{
+			name:   "throws error given invalid request",
+			userID: 8,
+			reqStr: `
+				{
+					"name": "",
+				}
+			`,
+			wantErr: errors.New("invalid request parameters"),
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			assert := _assert.New(s.T())
+
+			// Build request and its context
+			bodyReader := strings.NewReader(tt.reqStr)
+			req := httptest.NewRequest(http.MethodPost, "/loans/:loan_id/invest", bodyReader)
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+			ctx := s.rest.NewContext(req, rec)
+			ctx.Set(auth.AuthClaimsCtxKey, auth.AuthClaims{
+				UserID: uint(tt.userID),
+			})
+
+			for k, v := range tt.params {
+				ctx.SetParamNames(k)
+				ctx.SetParamValues(v)
+			}
+
+			// Do test and assert
+			err := s.investorLoanHandler.InvestInLoan(ctx)
+			got := strings.TrimSpace(rec.Body.String())
+
+			if tt.wantErr == nil {
+				assert.NoError(err)
+				assert.Equal(http.StatusCreated, rec.Code)
+			} else {
+				assert.Contains(got, tt.wantErr.Error())
+			}
+		})
+	}
+}
+
+func (s *loanIntegrationTestSuite) TestIntegration_DisburseLoan() {
+	tests := []struct {
+		name    string
+		userID  uint
+		params  map[string]string
+		wantErr error
+	}{
+		{
+			name:   "returns results given valid request and existing invested loan",
+			userID: 2,
+			params: map[string]string{
+				"loan_id": "4",
+			},
+			wantErr: nil,
+		},
+		{
+			name:   "throws error given valid request and not invested loan",
+			userID: 2,
+			params: map[string]string{
+				"loan_id": "3",
+			},
+			wantErr: loanModule.ErrLoanNotDisbursable,
+		},
+		{
+			name:    "throws error given invalid request",
+			userID:  2,
+			params:  nil,
+			wantErr: errors.New("invalid request parameters"),
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			assert := _assert.New(s.T())
+
+			// Build request and its context
+			req := httptest.NewRequest(http.MethodPatch, "/loans/:loan_id/disburse", nil)
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+			ctx := s.rest.NewContext(req, rec)
+			ctx.Set(auth.AuthClaimsCtxKey, auth.AuthClaims{
+				UserID: uint(tt.userID),
+			})
+
+			for k, v := range tt.params {
+				ctx.SetParamNames(k)
+				ctx.SetParamValues(v)
+			}
+
+			// Do test and assert
+			err := s.fieldValidatorLoanHandler.DisburseLoan(ctx)
 			got := strings.TrimSpace(rec.Body.String())
 
 			if tt.wantErr == nil {
@@ -372,6 +591,20 @@ func (s *loanIntegrationTestSuite) SeedData() {
 			IsActive: true,
 			RoleID:   5,
 		},
+		{
+			Name:     "Rayfe Hamid",
+			Email:    "rayfe@indonesia.go.id",
+			Password: "rayfe@borrower",
+			IsActive: true,
+			RoleID:   5,
+		},
+		{
+			Name:     "Irsyad Nabil",
+			Email:    "chadmadna@gmail.com",
+			Password: "irsyad@borrower",
+			IsActive: true,
+			RoleID:   5,
+		},
 	}
 
 	for i := range users {
@@ -397,7 +630,7 @@ func (s *loanIntegrationTestSuite) SeedData() {
 		},
 		{
 			Name:                       "Pinjem dulu seratus",
-			Status:                     models.LoanStatusApproved,
+			Status:                     models.LoanStatusProposed,
 			BorrowerID:                 8,
 			ProductID:                  3,
 			PrincipalAmount:            "100000000.0",
@@ -407,13 +640,64 @@ func (s *loanIntegrationTestSuite) SeedData() {
 			ROI:                        "6.94",
 			LoanTerm:                   int(models.TermLength12Month),
 			VisitorID:                  ptr.NewUintPtr(2),
-			ApproverID:                 ptr.NewUintPtr(1),
 			ProofOfVisitAttachmentFile: "https://picsum.photos/seed/loanservice/900/1600",
+		},
+		{
+			Name:                       "Beli gelar",
+			Status:                     models.LoanStatusApproved,
+			BorrowerID:                 9,
+			ProductID:                  3,
+			PrincipalAmount:            "100000000.0",
+			RemainingAmount:            "15000000.0",
+			InterestRate:               0.06942,
+			TotalInterest:              "6942000.0",
+			ROI:                        "6.94",
+			LoanTerm:                   int(models.TermLength12Month),
+			VisitorID:                  ptr.NewUintPtr(2),
+			ProofOfVisitAttachmentFile: "https://picsum.photos/seed/loanservice/900/1600",
+			ApproverID:                 ptr.NewUintPtr(1),
+		},
+		{
+			Name:                       "Biaya rekaman album baru",
+			Status:                     models.LoanStatusInvested,
+			BorrowerID:                 10,
+			ProductID:                  2,
+			PrincipalAmount:            "10000000.0",
+			RemainingAmount:            "10000000.0",
+			InterestRate:               0.08,
+			TotalInterest:              "800000.0",
+			ROI:                        "8",
+			LoanTerm:                   int(models.TermLength6Month),
+			VisitorID:                  ptr.NewUintPtr(2),
+			ProofOfVisitAttachmentFile: "https://picsum.photos/seed/loanservice/900/1600",
+			ApproverID:                 ptr.NewUintPtr(1),
 		},
 	}
 
 	if err := s.db.Clauses(clause.OnConflict{DoNothing: true}).Create(&loans).Error; err != nil {
 		panic(fmt.Errorf("cannot bulk insert loans: %v", err))
+	}
+
+	investments := []models.Investment{
+		{
+			InvestorID: 6,
+			LoanID:     3,
+			Amount:     "60000000",
+		},
+		{
+			InvestorID: 5,
+			LoanID:     3,
+			Amount:     "25000000",
+		},
+		{
+			InvestorID: 5,
+			LoanID:     4,
+			Amount:     "10000000",
+		},
+	}
+
+	if err := s.db.Clauses(clause.OnConflict{DoNothing: true}).Create(&investments).Error; err != nil {
+		panic(fmt.Errorf("cannot bulk insert investments: %v", err))
 	}
 }
 
