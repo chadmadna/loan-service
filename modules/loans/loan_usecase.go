@@ -38,15 +38,8 @@ func (u *usecase) FetchLoanByID(ctx context.Context, loanID uint, opts *models.F
 
 // FetchLoans implements models.LoanUsecase.
 func (u *usecase) FetchLoans(ctx context.Context, opts *models.FetchLoanOpts) ([]models.Loan, error) {
-	if opts.UserID > 0 {
-		user, err := u.userUsecase.FetchUserByID(ctx, opts.UserID, nil)
-		if err != nil {
-			return nil, errs.Wrap(err)
-		}
-
-		if user == nil {
-			return nil, errs.Wrap(ErrUserNotFound)
-		}
+	if opts != nil && !(opts.UserID > 0 && opts.RoleType != "") {
+		return nil, errs.Wrap(ErrInvalidParams)
 	}
 
 	loans, err := u.repo.FetchLoans(ctx, opts)

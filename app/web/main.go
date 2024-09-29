@@ -2,13 +2,11 @@ package main
 
 import (
 	"fmt"
+	"loan-service/app"
 	authMiddleware "loan-service/app/web/middleware"
 	"loan-service/config"
 	"loan-service/database"
 	"loan-service/models"
-	loansModule "loan-service/modules/loans"
-	productsModule "loan-service/modules/products"
-	usersModule "loan-service/modules/users"
 	"loan-service/services/auth"
 	"loan-service/services/email"
 	"loan-service/services/upload"
@@ -27,10 +25,7 @@ import (
 	_log "github.com/labstack/gommon/log"
 	"github.com/samber/do"
 	"golang.org/x/time/rate"
-	"gorm.io/gorm"
 )
-
-var injector *do.Injector
 
 func main() {
 	fmt.Println("Running in stage:", config.Data.Stage)
@@ -47,61 +42,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	// Dependency injection
-	injector = do.New()
-
-	// Database
-	do.Provide[*gorm.DB](injector, func(i *do.Injector) (*gorm.DB, error) {
-		return db, nil
-	})
-
-	// Services
-	do.Provide[email.EmailService](injector, func(i *do.Injector) (email.EmailService, error) {
-		return email.NewEmailService(
-			config.Data.EmailSendGridAPIKey, config.Data.DefaultSenderAddress, config.Data.DefaultSenderName,
-		), nil
-	})
-
-	do.Provide[upload.UploadService](injector, func(i *do.Injector) (upload.UploadService, error) {
-		return upload.NewUploadService(), nil
-	})
-
-	// Products module
-	do.Provide[models.ProductRepository](injector, func(i *do.Injector) (models.ProductRepository, error) {
-		return productsModule.NewProductRepository(db), nil
-	})
-
-	do.Provide[models.ProductUsecase](injector, func(i *do.Injector) (models.ProductUsecase, error) {
-		return productsModule.NewProductUsecase(
-			do.MustInvoke[models.ProductRepository](injector),
-		), nil
-	})
-
-	// Loans module
-	do.Provide[models.LoanRepository](injector, func(i *do.Injector) (models.LoanRepository, error) {
-		return loansModule.NewLoanRepository(db), nil
-	})
-
-	do.Provide[models.LoanUsecase](injector, func(i *do.Injector) (models.LoanUsecase, error) {
-		return loansModule.NewLoanUsecase(
-			do.MustInvoke[models.LoanRepository](i),
-			do.MustInvoke[models.UserUsecase](i),
-			do.MustInvoke[email.EmailService](injector),
-			do.MustInvoke[upload.UploadService](injector),
-		), nil
-	})
-
-	// Users module
-	do.Provide[models.UserRepository](injector, func(i *do.Injector) (models.UserRepository, error) {
-		return usersModule.NewUserRepository(db), nil
-	})
-
-	do.Provide[models.UserUsecase](injector, func(i *do.Injector) (models.UserUsecase, error) {
-		return usersModule.NewUserUsecase(
-			do.MustInvoke[models.UserRepository](i),
-		), nil
-	})
 
 	// HTTP server instance
 	e := echo.New()
@@ -121,6 +61,13 @@ func main() {
 	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(
 		rate.Limit(50),
 	)))
+
+	// Services
+	emailSvc := email.NewEmailService(config.Data.EmailSendGridAPIKey, config.Data.DefaultSenderAddress, config.Data.DefaultSenderName)
+	uploadSvc := upload.NewUploadService()
+
+	// Dependency injection
+	injector := app.SetupInjections(db, e, emailSvc, uploadSvc)
 
 	// Register router groups
 	mg := e.Group("/app", authMiddleware.JWTAuth(do.MustInvoke[models.UserRepository](injector)))

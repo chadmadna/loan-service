@@ -4,14 +4,11 @@ import (
 	"fmt"
 	"loan-service/models"
 	"loan-service/utils/money"
-	"time"
 )
 
 type FetchMyLoansResp struct {
 	ID              uint      `json:"id"`
 	Name            string    `json:"name"`
-	CreatedAt       string    `json:"created_at"`
-	UpdatedAt       string    `json:"updated_at"`
 	Status          string    `json:"status"`
 	PrincipalAmount string    `json:"principal_amount"`
 	RemainingAmount string    `json:"remaining_amount"`
@@ -45,8 +42,6 @@ func ModelToDto(l *models.Loan) *FetchMyLoansResp {
 	res := FetchMyLoansResp{
 		ID:              l.ID,
 		Name:            l.Name,
-		CreatedAt:       l.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:       l.UpdatedAt.Format(time.RFC3339),
 		Status:          string(l.Status),
 		PrincipalAmount: money.DisplayMoney(l.PrincipalAmount),
 		RemainingAmount: money.DisplayMoney(l.RemainingAmount),

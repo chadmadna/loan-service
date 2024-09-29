@@ -1,7 +1,7 @@
 package dto
 
 type StartLoanRequest struct {
-	Name      string `json:"name" validate:"required"`
+	Name      string `json:"name" validate:"required,gt=0"`
 	ProductID uint   `json:"product_id" validate:"required,gt=0"`
 }
 

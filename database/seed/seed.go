@@ -6,7 +6,6 @@ import (
 	database "loan-service/database"
 	"loan-service/models"
 	"loan-service/services/auth"
-	"loan-service/utils/ptr"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -151,56 +150,57 @@ func main() {
 		panic(fmt.Errorf("cannot bulk insert users: %v", err))
 	}
 
-	loans := []models.Loan{
-		{
-			Model:                      gorm.Model{ID: 1},
-			Name:                       "Foreign investment for ada deh",
-			Status:                     models.LoanStatusApproved,
-			BorrowerID:                 7,
-			ProductID:                  3,
-			PrincipalAmount:            "100000000.0",
-			RemainingAmount:            "15000000.0",
-			InterestRate:               0.06942,
-			TotalInterest:              "6942000.0",
-			ROI:                        "6.94",
-			LoanTerm:                   int(models.TermLength12Month),
-			VisitorID:                  ptr.NewUintPtr(3),
-			ApproverID:                 ptr.NewUintPtr(2),
-			ProofOfVisitAttachmentFile: "https://picsum.photos/seed/loanservice/900/1600",
-		},
-		{
-			Model:           gorm.Model{ID: 2},
-			Name:            "Gofundme for my companies",
-			Status:          models.LoanStatusProposed,
-			BorrowerID:      8,
-			ProductID:       3,
-			PrincipalAmount: "100000000.0",
-			RemainingAmount: "100000000.0",
-			InterestRate:    0.06942,
-			TotalInterest:   "6942000.0",
-			ROI:             "6.94",
-			LoanTerm:        int(models.TermLength12Month),
-		},
-	}
+	// NOTE: Uncomment if you'd like to test with pre-existing loans and investments
+	// loans := []models.Loan{
+	// 	{
+	// 		Model:                      gorm.Model{ID: 1},
+	// 		Name:                       "Foreign investment for ada deh",
+	// 		Status:                     models.LoanStatusApproved,
+	// 		BorrowerID:                 7,
+	// 		ProductID:                  3,
+	// 		PrincipalAmount:            "100000000.0",
+	// 		RemainingAmount:            "15000000.0",
+	// 		InterestRate:               0.06942,
+	// 		TotalInterest:              "6942000.0",
+	// 		ROI:                        "6.94",
+	// 		LoanTerm:                   int(models.TermLength12Month),
+	// 		VisitorID:                  ptr.NewUintPtr(3),
+	// 		ApproverID:                 ptr.NewUintPtr(2),
+	// 		ProofOfVisitAttachmentFile: "https://picsum.photos/seed/loanservice/900/1600",
+	// 	},
+	// 	{
+	// 		Model:           gorm.Model{ID: 2},
+	// 		Name:            "Gofundme for my companies",
+	// 		Status:          models.LoanStatusProposed,
+	// 		BorrowerID:      8,
+	// 		ProductID:       3,
+	// 		PrincipalAmount: "100000000.0",
+	// 		RemainingAmount: "100000000.0",
+	// 		InterestRate:    0.06942,
+	// 		TotalInterest:   "6942000.0",
+	// 		ROI:             "6.94",
+	// 		LoanTerm:        int(models.TermLength12Month),
+	// 	},
+	// }
 
-	if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&loans).Error; err != nil {
-		panic(fmt.Errorf("cannot bulk insert loans: %v", err))
-	}
+	// if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&loans).Error; err != nil {
+	// 	panic(fmt.Errorf("cannot bulk insert loans: %v", err))
+	// }
 
-	investments := []models.Investment{
-		{
-			InvestorID: 6,
-			LoanID:     1,
-			Amount:     "60000000",
-		},
-		{
-			InvestorID: 5,
-			LoanID:     1,
-			Amount:     "25000000",
-		},
-	}
+	// investments := []models.Investment{
+	// 	{
+	// 		InvestorID: 6,
+	// 		LoanID:     1,
+	// 		Amount:     "60000000",
+	// 	},
+	// 	{
+	// 		InvestorID: 5,
+	// 		LoanID:     1,
+	// 		Amount:     "25000000",
+	// 	},
+	// }
 
-	if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&investments).Error; err != nil {
-		panic(fmt.Errorf("cannot bulk insert investments: %v", err))
-	}
+	// if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&investments).Error; err != nil {
+	// 	panic(fmt.Errorf("cannot bulk insert investments: %v", err))
+	// }
 }

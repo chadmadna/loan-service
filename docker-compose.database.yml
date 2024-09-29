@@ -1,0 +1,16 @@
+version: "3"
+services:
+  postgres:
+    image: postgres:13-alpine
+    container_name: loan-service-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${TEST_DB_NAME}
+    env_file:
+      - .env
+    ports:
+      - "5555:5432"
+    volumes:
+      - "/tmp/postgres/data:/var/lib/postgresql/data"

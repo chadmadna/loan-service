@@ -50,7 +50,7 @@ bin/golangci-lint: bin
 
 setup: $(MOCKERY) $(GOLANGCI) $(AIR)
 setup:
-	@docker build -f Dockerfile.database \
+	@docker build -f Dockerfile.setupdb \
 		--build-arg DB_USER=$(DB_USER) \
 		--build-arg DB_PASSWORD=$(DB_PASSWORD) \
 		--build-arg DB_NAME=$(DB_NAME) \
@@ -79,8 +79,20 @@ run-dev: dep build
 run-dev:
 	@DOCKERFILE_PATH=Dockerfile.dev docker-compose up --build
 
+run-test-db: # standalone db
+	@docker-compose -f docker-compose.database.yml up --build
+
+init-test-db:
+	@PGPASSWORD=$(DB_PASSWORD) psql -U $(DB_USER) -h $(LOCAL_DB_HOST) -p $(LOCAL_DB_PORT) -d $(DB_NAME) \
+		-tc "SELECT 1 FROM pg_database WHERE datname = 'loanservice_db_test';" | \
+		grep -q 1 || PGPASSWORD=$(DB_PASSWORD) psql -U $(DB_USER) -h $(LOCAL_DB_HOST) -p $(LOCAL_DB_PORT) -d $(DB_NAME) -c \
+		"CREATE DATABASE loanservice_db_test;"
+
+test: init-test-db
 test:
-	@go test ./... --short -cover
+	@DB_HOST=$(LOCAL_DB_HOST) DB_PORT=$(LOCAL_DB_PORT) DB_NAME=$(TEST_DB_NAME) \
+		DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) \
+		go test ./... --short -cover
 
 lint: $(GOLANGCI)
 	@golangci-lint run

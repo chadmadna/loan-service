@@ -76,7 +76,7 @@ func (r *repository) CreateLoan(ctx context.Context, loan *models.Loan) error {
 
 // InvestInLoan implements models.LoanRepository.
 func (r *repository) InvestInLoan(ctx context.Context, loan *models.Loan, investor *models.User, amount float64) error {
-	txErr := r.db.Debug().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	txErr := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Check for existing investments
 		var existingInvestments []models.Investment
 		err := tx.Model(&models.Investment{}).Where("loan_id = ?", loan.ID).Find(&existingInvestments).Error
@@ -169,7 +169,7 @@ func (r *repository) GetTotalInvestedAmount(ctx context.Context, investorID *uin
 
 // UpdateLoan implements models.LoanRepository.
 func (r *repository) UpdateLoan(ctx context.Context, loan *models.Loan) error {
-	err := r.db.Debug().WithContext(ctx).Model(loan).Updates(map[string]any{
+	err := r.db.WithContext(ctx).Model(loan).Updates(map[string]any{
 		"name":                           loan.Name,
 		"status":                         loan.Status,
 		"remaining_amount":               loan.RemainingAmount,

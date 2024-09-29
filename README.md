@@ -15,6 +15,7 @@ Practice for creating a loan service. Create loans from available loan products,
 - Run service as multi-container with docker-compose.yml `make run`
 - Seed database with initial data once database is up `make seed-db`
 - App runs on `localhost:8080` by default, with Postgres in `localhost:5432`
+- Test by running test database `make run-test-db` in one terminal, and running `make test` in another terminal
 
 ## Definition
 The term loan refers to a type of credit vehicle in which a sum of money is lent to another party in exchange for future repayment of the value or principal amount. In many cases, the lender also adds interest or finance charges to the principal value, which the borrower must repay in addition to the principal balance.
