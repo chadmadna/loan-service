@@ -22,7 +22,7 @@ func (u *uploadService) UploadFile(sourceFile io.Reader, filename, contentType s
 	fmt.Printf("[upload started] %s (%s)\n", filename, contentType)
 
 	// Create new file in public dir
-	destinationFile, err := os.Create(path.Join("public", filename))
+	destinationFile, err := os.Create(path.Join("tmp", filename))
 	if err != nil {
 		fmt.Println(err)
 	}

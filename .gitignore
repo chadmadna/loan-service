@@ -22,7 +22,8 @@ go.work.sum
 .env
 
 # Output directories & files
-tmp
+tmp/*
+!tmp/.keep
 bin
 vendor
 coverage.out*

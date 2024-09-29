@@ -109,7 +109,7 @@ func main() {
 	e.HideBanner = true
 	e.Logger.SetLevel(_log.DEBUG)
 	e.Validator = &CustomValidator{validator: validator.New()}
-	e.Use(middleware.Static("/public"))
+	e.Use(middleware.Static("/tmp"))
 
 	e.Pre(middleware.RemoveTrailingSlash())
 
@@ -127,9 +127,9 @@ func main() {
 	staffGroup := mg.Group("/admin", authMiddleware.AllowOnlyRoles(
 		auth.RoleTypeSuperuser, auth.RoleTypeStaff,
 	))
-	// fieldValidatorGroup := mg.Group("/field-validation", authMiddleware.AllowOnlyRoles(
-	// 	auth.RoleTypeSuperuser, auth.RoleTypeStaff, auth.RoleTypeFieldValidator,
-	// ))
+	fieldValidatorGroup := mg.Group("/field-validation", authMiddleware.AllowOnlyRoles(
+		auth.RoleTypeSuperuser, auth.RoleTypeStaff, auth.RoleTypeFieldValidator,
+	))
 	investorGroup := mg.Group("/invest", authMiddleware.AllowOnlyRoles(
 		auth.RoleTypeSuperuser, auth.RoleTypeInvestor,
 	))
@@ -163,6 +163,13 @@ func main() {
 
 	_loanHandlers.NewStaffHandler(
 		staffGroup,
+		do.MustInvoke[models.LoanUsecase](injector),
+		do.MustInvoke[models.UserUsecase](injector),
+		do.MustInvoke[*_loanHandlers.CommonLoanHandler](injector),
+	)
+
+	_loanHandlers.NewFieldValidatorHandler(
+		fieldValidatorGroup,
 		do.MustInvoke[models.LoanUsecase](injector),
 		do.MustInvoke[models.UserUsecase](injector),
 		do.MustInvoke[*_loanHandlers.CommonLoanHandler](injector),
