@@ -24,7 +24,7 @@ type User struct {
 	RoleID         uint
 	Role           Role         `json:"role" gorm:"foreignKey:RoleID"`
 	InvestedLoans  []Loan       `json:"invested_loans" gorm:"many2many:investments;foreignKey:ID;joinForeignKey:InvestorID;references:ID;joinReferences:LoanID"`
-	Investments    []Investment `json:"investments" gorm:"foreignKey:InvestorID"`
+	Investments    []Investment `json:"investments" gorm:"->;foreignKey:InvestorID"`
 	BorrowedLoans  []Loan       `json:"borrowed_loans" gorm:"foreignKey:BorrowerID"`
 }
 

@@ -19,6 +19,12 @@ var (
 		Err:        errors.New("Cannot find user associated with loan."),
 	}
 
+	ErrLoanAlreadyVisited = errs.GeneralError{
+		StatusCode: http.StatusBadRequest,
+		ErrorCode:  "LoanAlreadyVisited",
+		Err:        errors.New("This loan has already been marked as visited."),
+	}
+
 	ErrLoanAlreadyExists = errs.GeneralError{
 		StatusCode: http.StatusBadRequest,
 		ErrorCode:  "LoanAlreadyExists",

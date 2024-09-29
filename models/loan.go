@@ -31,9 +31,9 @@ type Loan struct {
 	InterestRate               float64      `json:"interest_rate"` // in per annum
 	TotalInterest              string       `json:"total_interest"`
 	ROI                        string       `json:"roi"`
-	LoanTerm                   int          `json:"loan_term"`                                                                                                          // in months
-	Investors                  []User       `json:"investors" gorm:"many2many:investments;foreignKey:ID;joinForeignKey:LoanID;references:ID;joinReferences:InvestorID"` //nolint:lll
-	Investments                []Investment `json:"investments" gorm:"foreignKey:LoanID"`
+	LoanTerm                   int          `json:"loan_term"`                                                                                                             // in months
+	Investors                  []User       `json:"investors" gorm:"->;many2many:investments;foreignKey:ID;joinForeignKey:LoanID;references:ID;joinReferences:InvestorID"` //nolint:lll
+	Investments                []Investment `json:"investments" gorm:"->;foreignKey:LoanID"`
 	VisitorID                  *uint        `json:"visitor_id"`
 	Visitor                    *User        `json:"visitor" gorm:"foreignKey:VisitorID;default:null"`
 	ApproverID                 *uint        `json:"approver_id"`
@@ -97,10 +97,9 @@ func NewLoan(product *Product, borrower *User) *Loan {
 }
 
 type FetchLoanOpts struct {
-	UserID       uint
-	RoleType     auth.RoleType
-	Status       []LoanStatus
-	WithPreloads bool
+	UserID   uint
+	RoleType auth.RoleType
+	Status   []LoanStatus
 }
 
 type LoanRepository interface {

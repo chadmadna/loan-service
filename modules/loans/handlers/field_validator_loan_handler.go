@@ -53,11 +53,7 @@ func (h *FieldValidatorLoanHandler) MarkLoanBorrowerVisited(c echo.Context) erro
 
 	defer attachedFile.Close()
 
-	loan, err := h.Usecase.FetchLoanByID(reqCtx, body.LoanID, &models.FetchLoanOpts{
-		UserID:       claims.UserID,
-		RoleType:     claims.RoleType,
-		WithPreloads: true,
-	})
+	loan, err := h.Usecase.FetchLoanByID(reqCtx, body.LoanID, &models.FetchLoanOpts{})
 	if err != nil {
 		return resp.HTTPRespFromError(c, err)
 	}

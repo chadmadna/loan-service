@@ -21,16 +21,9 @@ type repository struct {
 // FetchLoanOpts is for the system to fetch loans associated a certain user according to their role type
 func (r *repository) FetchLoans(ctx context.Context, opts *models.FetchLoanOpts) ([]models.Loan, error) {
 	var results []models.Loan
-	query := r.db.WithContext(ctx).Model(&models.Loan{})
-
-	if opts != nil && opts.WithPreloads {
-		query = query.Preload("Borrower").
-			Preload("Investors").
-			Preload("Product").
-			Preload("Visitor").
-			Preload("Approver").
-			Preload("Disburser")
-	}
+	query := r.db.WithContext(ctx).Model(&models.Loan{}).
+		Preload("Borrower").
+		Preload("Product")
 
 	if opts != nil && len(opts.Status) > 0 {
 		query = query.Where("status IN (?)", opts.Status)
@@ -53,11 +46,7 @@ func (r *repository) FetchLoanByID(ctx context.Context, loanID uint, opts *model
 	var result *models.Loan
 	query := r.db.WithContext(ctx).Model(&models.Loan{}).
 		Preload("Borrower").
-		Preload("Investors").
-		Preload("Product").
-		Preload("Visitor").
-		Preload("Approver").
-		Preload("Disburser")
+		Preload("Product")
 
 	if opts != nil && len(opts.Status) > 0 {
 		query = query.Where("status IN (?)", opts.Status)
@@ -180,7 +169,7 @@ func (r *repository) GetTotalInvestedAmount(ctx context.Context, investorID *uin
 
 // UpdateLoan implements models.LoanRepository.
 func (r *repository) UpdateLoan(ctx context.Context, loan *models.Loan) error {
-	err := r.db.WithContext(ctx).Model(&models.Loan{}).Updates(map[string]any{
+	err := r.db.Debug().WithContext(ctx).Model(loan).Updates(map[string]any{
 		"name":                           loan.Name,
 		"status":                         loan.Status,
 		"remaining_amount":               loan.RemainingAmount,
@@ -204,15 +193,30 @@ func scopeLoanQuery(query *gorm.DB, userID uint, roleType auth.RoleType) *gorm.D
 	switch roleType {
 	// Fetch loans that an investor has funded
 	case auth.RoleTypeInvestor:
-		query = query.Debug().Joins("LEFT JOIN investments ON investments.investor_id = ?", userID).
+		query = query.Preload("Visitor").
+			Preload("Approver").
+			Preload("Investors").
+			Preload("Disburser").
+			Joins("LEFT JOIN investments ON investments.investor_id = ?", userID).
 			Where("status != ?", models.LoanStatusProposed)
 	// Fetch loans that a field validator has worked on
 	case auth.RoleTypeFieldValidator:
-		query = query.Where("visitor_id = ? OR disburser_id = ?", userID, userID)
+		query = query.Preload("Visitor").
+			Preload("Approver").
+			Preload("Investors").
+			Preload("Disburser").
+			Where("visitor_id = ? OR disburser_id = ?", userID, userID).
+			Or("status = ?", models.LoanStatusProposed)
 	// Fetch loans that a borrower has requested
 	case auth.RoleTypeBorrower:
-		query = query.Where("borrower_id = ?", userID)
+		query = query.Preload("Visitor").
+			Preload("Disburser").
+			Where("borrower_id = ?", userID)
 	default:
+		query = query.Preload("Visitor").
+			Preload("Approver").
+			Preload("Investors").
+			Preload("Disburser")
 	}
 
 	return query

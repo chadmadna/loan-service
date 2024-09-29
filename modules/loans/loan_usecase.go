@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gabriel-vasile/mimetype"
+	"github.com/subosito/gozaru"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
@@ -119,6 +120,10 @@ func (u *usecase) MarkLoanBorrowerVisited(ctx context.Context, loan *models.Loan
 		return errs.Wrap(ErrInvalidParams)
 	}
 
+	if loan.VisitorID != nil {
+		return errs.Wrap(ErrLoanAlreadyVisited)
+	}
+
 	mimeType, err := mimetype.DetectReader(attachment)
 	if err != nil {
 		return errs.Wrap(err)
@@ -135,9 +140,11 @@ func (u *usecase) MarkLoanBorrowerVisited(ctx context.Context, loan *models.Loan
 		return errs.Wrap(ErrInvalidParams)
 	}
 
+	safePath := gozaru.Sanitize(fmt.Sprintf("ProofOfVisit_%s.%s", time.Now().Format(time.RFC3339), extension))
+
 	attachmentPath, err := u.uploadService.UploadFile(
 		attachment,
-		fmt.Sprintf("ProofOfVisit_%s.%s", time.Now().Format(time.RFC3339), extension),
+		safePath,
 		mimeType.String(),
 	)
 	if err != nil {
