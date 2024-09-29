@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"loan-service/models"
+	"loan-service/modules/products/handlers/dto"
 	"loan-service/utils/resp"
 
 	"github.com/labstack/echo/v4"
@@ -28,5 +29,5 @@ func (h *ProductHandler) FetchProducts(c echo.Context) error {
 		return resp.HTTPRespFromError(c, err)
 	}
 
-	return resp.HTTPOk(c, res)
+	return resp.HTTPOk(c, dto.ModelsToDto(res))
 }

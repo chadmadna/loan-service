@@ -24,5 +24,7 @@ func DisplayAsPercentage(fl float64) string {
 		floatStr = trim
 	}
 
+	floatStr = strings.TrimSuffix(floatStr, ".")
+
 	return fmt.Sprintf("%s%%", floatStr)
 }

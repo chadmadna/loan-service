@@ -142,6 +142,14 @@ func main() {
 			IsActive: true,
 			RoleID:   5,
 		},
+		{
+			Model:    gorm.Model{ID: 9},
+			Name:     "Gibro Rakbro",
+			Email:    "fufufafa@indonesia.go.id",
+			Password: "fufufafa@borrower",
+			IsActive: true,
+			RoleID:   5,
+		},
 	}
 
 	for i := range users {
