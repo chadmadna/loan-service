@@ -53,7 +53,7 @@ func (h *BorrowerLoanHandler) StartLoan(c echo.Context) error {
 		return resp.HTTPRespFromError(c, err)
 	}
 
-	loan, err := h.Usecase.StartLoan(reqCtx, product, borrower)
+	loan, err := h.Usecase.StartLoan(reqCtx, body.Name, product, borrower)
 	if err != nil {
 		return resp.HTTPRespFromError(c, err)
 	}

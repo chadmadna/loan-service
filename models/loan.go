@@ -80,10 +80,11 @@ func (l *Loan) AdvanceState(nextState LoanStatus, action string) error {
 }
 
 // factory
-func NewLoan(product *Product, borrower *User) *Loan {
+func NewLoan(name string, product *Product, borrower *User) *Loan {
 	roi, totalInterest := money.CalculateROI(product.PrincipalAmount, product.InterestRate, int(product.Term))
 
 	return &Loan{
+		Name:            name,
 		ProductID:       product.ID,
 		BorrowerID:      borrower.ID,
 		Status:          LoanStatusProposed,
@@ -115,7 +116,7 @@ type LoanUsecase interface {
 	FetchLoans(ctx context.Context, opts *FetchLoanOpts) ([]Loan, error)
 	FetchLoansByUserID(ctx context.Context, userID uint) ([]Loan, error)
 	FetchLoanByID(ctx context.Context, loanID uint, opts *FetchLoanOpts) (*Loan, error)
-	StartLoan(ctx context.Context, product *Product, borrower *User) (*Loan, error)
+	StartLoan(ctx context.Context, name string, product *Product, borrower *User) (*Loan, error)
 	MarkLoanBorrowerVisited(ctx context.Context, loan *Loan, visitor *User, attachment io.Reader) error
 	ApproveLoan(ctx context.Context, loan *Loan, approver *User) error
 	InvestInLoan(ctx context.Context, loan *Loan, investor *User, amount float64) error

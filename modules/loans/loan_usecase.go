@@ -88,7 +88,7 @@ func (u *usecase) FetchLoansByUserID(ctx context.Context, userID uint) ([]models
 }
 
 // StartLoan implements models.LoanUsecase.
-func (u *usecase) StartLoan(ctx context.Context, product *models.Product, borrower *models.User) (*models.Loan, error) {
+func (u *usecase) StartLoan(ctx context.Context, name string, product *models.Product, borrower *models.User) (*models.Loan, error) {
 	if product == nil || borrower == nil {
 		return nil, errs.Wrap(ErrInvalidParams)
 	}
@@ -105,7 +105,7 @@ func (u *usecase) StartLoan(ctx context.Context, product *models.Product, borrow
 		return nil, errs.Wrap(ErrLoanAlreadyExists)
 	}
 
-	loan := models.NewLoan(product, borrower)
+	loan := models.NewLoan(name, product, borrower)
 	err = u.repo.CreateLoan(ctx, loan)
 	if err != nil {
 		return nil, errs.Wrap(err)

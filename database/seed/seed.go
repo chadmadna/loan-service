@@ -79,7 +79,6 @@ func main() {
 
 	users := []models.User{
 		{
-			Model:    gorm.Model{ID: 1},
 			Name:     "Angela Merkel",
 			Email:    "admin@loanservice.io",
 			Password: "@superuser",
@@ -87,7 +86,6 @@ func main() {
 			RoleID:   1,
 		},
 		{
-			Model:    gorm.Model{ID: 2},
 			Name:     "Emmanuel Macron",
 			Email:    "staff@loanservice.io",
 			Password: "@staff",
@@ -95,7 +93,6 @@ func main() {
 			RoleID:   2,
 		},
 		{
-			Model:    gorm.Model{ID: 3},
 			Name:     "Silvio Berlusconi",
 			Email:    "field.validator@loanservice.io",
 			Password: "@field.validator",
@@ -103,7 +100,6 @@ func main() {
 			RoleID:   3,
 		},
 		{
-			Model:    gorm.Model{ID: 4},
 			Name:     "Larry Fink",
 			Email:    "larryfink@blackrock.com",
 			Password: "larry@investor",
@@ -111,7 +107,6 @@ func main() {
 			RoleID:   4,
 		},
 		{
-			Model:    gorm.Model{ID: 5},
 			Name:     "Luke Sarsfield",
 			Email:    "lukesarsfield@goldmansachs.com",
 			Password: "luke@investor",
@@ -119,7 +114,6 @@ func main() {
 			RoleID:   4,
 		},
 		{
-			Model:    gorm.Model{ID: 6},
 			Name:     "George Soros",
 			Email:    "georgesoros@sorosfund.com",
 			Password: "george@investor",
@@ -127,7 +121,6 @@ func main() {
 			RoleID:   4,
 		},
 		{
-			Model:    gorm.Model{ID: 7},
 			Name:     "Zulhas Hasan",
 			Email:    "zulhashasan@indonesia.go.id",
 			Password: "zulhas@borrower",
@@ -135,7 +128,6 @@ func main() {
 			RoleID:   5,
 		},
 		{
-			Model:    gorm.Model{ID: 8},
 			Name:     "Nuhut Bingsar",
 			Email:    "nuhutbingsar@indonesia.go.id",
 			Password: "nuhut@borrower",
@@ -143,7 +135,6 @@ func main() {
 			RoleID:   5,
 		},
 		{
-			Model:    gorm.Model{ID: 9},
 			Name:     "Gibro Rakbro",
 			Email:    "fufufafa@indonesia.go.id",
 			Password: "fufufafa@borrower",

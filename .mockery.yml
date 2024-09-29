@@ -6,9 +6,9 @@ outpkg: "mocks"
 all: True
 recursive: True
 packages:
-  loan-service/services:
+  loan-service/models:
     config:
       all: True
-  loan-service/models:
+  loan-service/services:
     config:
       all: True
