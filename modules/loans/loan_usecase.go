@@ -3,20 +3,26 @@ package loans
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"loan-service/models"
 	"loan-service/services/auth"
 	"loan-service/services/email"
+	"loan-service/services/upload"
 	"loan-service/utils/errs"
 	"os"
+	"time"
 
+	"github.com/gabriel-vasile/mimetype"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
 
 type usecase struct {
-	repo         models.LoanRepository
-	userUsecase  models.UserUsecase
-	emailService email.EmailService
+	repo          models.LoanRepository
+	userUsecase   models.UserUsecase
+	emailService  email.EmailService
+	uploadService upload.UploadService
 }
 
 // FetchLoanByID implements models.LoanUsecase.
@@ -108,13 +114,40 @@ func (u *usecase) StartLoan(ctx context.Context, product *models.Product, borrow
 }
 
 // MarkLoanBorrowerVisited implements models.LoanUsecase.
-func (u *usecase) MarkLoanBorrowerVisited(ctx context.Context, loan *models.Loan, visitor *models.User, attachment *os.File) error {
-	if loan.Status != models.LoanStatusProposed {
-		return models.NewInvalidStateError(loan.Status, "MarkLoanBorrowerVisited")
+func (u *usecase) MarkLoanBorrowerVisited(ctx context.Context, loan *models.Loan, visitor *models.User, attachment io.Reader) error {
+	if loan == nil || visitor == nil || attachment == nil {
+		return errs.Wrap(ErrInvalidParams)
+	}
+
+	mimeType, err := mimetype.DetectReader(attachment)
+	if err != nil {
+		return errs.Wrap(err)
+	}
+
+	var extension string
+	switch mimeType.String() {
+	case "image/png":
+		extension = "png"
+	case "image/jpeg":
+		extension = "jpg"
+	default:
+		// wrong mimetype
+		return errs.Wrap(ErrInvalidParams)
+	}
+
+	attachmentPath, err := u.uploadService.UploadFile(
+		attachment,
+		fmt.Sprintf("ProofOfVisit_%s.%s", time.Now().Format(time.RFC3339), extension),
+		mimeType.String(),
+	)
+	if err != nil {
+		return errs.Wrap(err)
 	}
 
 	loan.Visitor = visitor
-	err := u.repo.UpdateLoan(ctx, loan)
+	loan.ProofOfVisitAttachmentFile = attachmentPath
+
+	err = u.repo.UpdateLoan(ctx, loan)
 	if err != nil {
 		return errs.Wrap(err)
 	}
@@ -125,7 +158,12 @@ func (u *usecase) MarkLoanBorrowerVisited(ctx context.Context, loan *models.Loan
 // ApproveLoan implements models.LoanUsecase.
 func (u *usecase) ApproveLoan(ctx context.Context, loan *models.Loan, approver *models.User) error {
 	loan.Approver = approver
-	err := u.repo.UpdateLoan(ctx, loan)
+	err := loan.AdvanceState(models.LoanStatusApproved, "ApproveLoan")
+	if err != nil {
+		return errs.Wrap(err)
+	}
+
+	err = u.repo.UpdateLoan(ctx, loan)
 	if err != nil {
 		return errs.Wrap(err)
 	}
@@ -167,7 +205,12 @@ func (u *usecase) InvestInLoan(ctx context.Context, loan *models.Loan, investor 
 // DisburseLoan implements models.LoanUsecase.
 func (u *usecase) DisburseLoan(ctx context.Context, loan *models.Loan, disburser *models.User) error {
 	loan.Disburser = disburser
-	err := u.repo.UpdateLoan(ctx, loan)
+	err := loan.AdvanceState(models.LoanStatusDisbursed, "DisburseLoan")
+	if err != nil {
+		return errs.Wrap(err)
+	}
+
+	err = u.repo.UpdateLoan(ctx, loan)
 	if err != nil {
 		return errs.Wrap(err)
 	}
@@ -175,6 +218,11 @@ func (u *usecase) DisburseLoan(ctx context.Context, loan *models.Loan, disburser
 	return nil
 }
 
-func NewLoanUsecase(repo models.LoanRepository, userUC models.UserUsecase, emailService email.EmailService) models.LoanUsecase {
-	return &usecase{repo, userUC, emailService}
+func NewLoanUsecase(
+	repo models.LoanRepository,
+	userUC models.UserUsecase,
+	emailService email.EmailService,
+	uploadService upload.UploadService,
+) models.LoanUsecase {
+	return &usecase{repo, userUC, emailService, uploadService}
 }

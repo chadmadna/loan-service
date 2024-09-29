@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"loan-service/utils/errs"
-	"os"
 
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
@@ -51,7 +50,7 @@ const (
 )
 
 type AttachmentOpts struct {
-	File        *os.File
+	File        io.Reader
 	ContentType AttachmentType
 	Filename    string
 }

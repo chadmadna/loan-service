@@ -2,9 +2,9 @@ package models
 
 import (
 	"context"
+	"io"
 	"loan-service/services/auth"
 	"loan-service/utils/money"
-	"os"
 
 	"gorm.io/gorm"
 )
@@ -117,7 +117,7 @@ type LoanUsecase interface {
 	FetchLoansByUserID(ctx context.Context, userID uint) ([]Loan, error)
 	FetchLoanByID(ctx context.Context, loanID uint, opts *FetchLoanOpts) (*Loan, error)
 	StartLoan(ctx context.Context, product *Product, borrower *User) (*Loan, error)
-	MarkLoanBorrowerVisited(ctx context.Context, loan *Loan, visitor *User, attachment *os.File) error
+	MarkLoanBorrowerVisited(ctx context.Context, loan *Loan, visitor *User, attachment io.Reader) error
 	ApproveLoan(ctx context.Context, loan *Loan, approver *User) error
 	InvestInLoan(ctx context.Context, loan *Loan, investor *User, amount float64) error
 	DisburseLoan(ctx context.Context, loan *Loan, disburser *User) error

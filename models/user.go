@@ -3,10 +3,10 @@ package models
 import (
 	"context"
 	"fmt"
+	"io"
 	"loan-service/services/auth"
 	"loan-service/services/email"
 	"loan-service/utils/errs"
-	"os"
 	"time"
 
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
@@ -45,7 +45,7 @@ func (u *User) SetNewPassword(passwordString string) {
 }
 
 // Notify investor by email when loan is fully invested
-func (u *User) NotifyEmailLoanFunded(ctx context.Context, emailService email.EmailService, loan *Loan, attachment *os.File) error {
+func (u *User) NotifyEmailLoanFunded(ctx context.Context, emailService email.EmailService, loan *Loan, attachment io.Reader) error {
 	subject := "Loan has been fully funded!"
 	body := fmt.Sprintf(`
 			<h1>A loan you financed has been fully funded!</h1>

@@ -11,6 +11,7 @@ import (
 	usersModule "loan-service/modules/users"
 	"loan-service/services/auth"
 	"loan-service/services/email"
+	"loan-service/services/upload"
 	"loan-service/utils/resp"
 	"loan-service/utils/tern"
 	"net/http"
@@ -62,6 +63,10 @@ func main() {
 		), nil
 	})
 
+	do.Provide[upload.UploadService](injector, func(i *do.Injector) (upload.UploadService, error) {
+		return upload.NewUploadService(), nil
+	})
+
 	// Products module
 	do.Provide[models.ProductRepository](injector, func(i *do.Injector) (models.ProductRepository, error) {
 		return productsModule.NewProductRepository(db), nil
@@ -83,6 +88,7 @@ func main() {
 			do.MustInvoke[models.LoanRepository](i),
 			do.MustInvoke[models.UserUsecase](i),
 			do.MustInvoke[email.EmailService](injector),
+			do.MustInvoke[upload.UploadService](injector),
 		), nil
 	})
 
@@ -103,6 +109,7 @@ func main() {
 	e.HideBanner = true
 	e.Logger.SetLevel(_log.DEBUG)
 	e.Validator = &CustomValidator{validator: validator.New()}
+	e.Use(middleware.Static("/public"))
 
 	e.Pre(middleware.RemoveTrailingSlash())
 

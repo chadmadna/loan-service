@@ -180,7 +180,15 @@ func (r *repository) GetTotalInvestedAmount(ctx context.Context, investorID *uin
 
 // UpdateLoan implements models.LoanRepository.
 func (r *repository) UpdateLoan(ctx context.Context, loan *models.Loan) error {
-	err := r.db.WithContext(ctx).Model(&models.Loan{}).Save(loan).Error
+	err := r.db.WithContext(ctx).Model(&models.Loan{}).Updates(map[string]any{
+		"name":                           loan.Name,
+		"status":                         loan.Status,
+		"remaining_amount":               loan.RemainingAmount,
+		"visitor_id":                     loan.VisitorID,
+		"approver_id":                    loan.ApproverID,
+		"disburser_id":                   loan.DisburserID,
+		"proof_of_visit_attachment_file": loan.ProofOfVisitAttachmentFile,
+	}).Error
 	if err != nil {
 		return err
 	}

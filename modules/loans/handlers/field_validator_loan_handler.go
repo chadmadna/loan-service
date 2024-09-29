@@ -9,30 +9,30 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type StaffLoanHandler struct {
+type FieldValidatorLoanHandler struct {
 	Usecase       models.LoanUsecase
 	UserUsecase   models.UserUsecase
 	CommonHandler *CommonLoanHandler
 }
 
-func NewStaffHandler(
+func NewFieldValidatorHandler(
 	g *echo.Group,
 	uc models.LoanUsecase,
 	userUC models.UserUsecase,
 	commonHandler *CommonLoanHandler,
 ) {
-	handler := &StaffLoanHandler{uc, userUC, commonHandler}
+	handler := &FieldValidatorLoanHandler{uc, userUC, commonHandler}
 
-	g.PATCH("/loans/:loan_id/approve", handler.ApproveLoan)
 	g.GET("/loans", commonHandler.FetchLoans)
-	g.GET("/loans/:loan_id", commonHandler.FetchLoan)
+	g.GET("/loan/:loan_id", commonHandler.FetchLoan)
+	g.PATCH("/loan/:loan_id/visit", handler.MarkLoanBorrowerVisited)
 }
 
-func (h *StaffLoanHandler) ApproveLoan(c echo.Context) error {
+func (h *FieldValidatorLoanHandler) MarkLoanBorrowerVisited(c echo.Context) error {
 	reqCtx := c.Request().Context()
 	claims := c.Get(auth.AuthClaimsCtxKey).(auth.AuthClaims)
 
-	body := dto.FetchLoanRequest{}
+	body := dto.MarkLoanBorrowerVisitedRequest{}
 	if err := c.Bind(&body); err != nil {
 		return resp.HTTPBadRequest(c, "InvalidBody", "invalid request parameters")
 	}
@@ -41,22 +41,36 @@ func (h *StaffLoanHandler) ApproveLoan(c echo.Context) error {
 		return resp.HTTPBadRequest(c, "InvalidBody", "invalid request parameters")
 	}
 
+	fileHeader, err := c.FormFile("attachment")
+	if err != nil {
+		return err
+	}
+
+	attachedFile, err := fileHeader.Open()
+	if err != nil {
+		return err
+	}
+
+	defer attachedFile.Close()
+
 	loan, err := h.Usecase.FetchLoanByID(reqCtx, body.LoanID, &models.FetchLoanOpts{
-		UserID: claims.UserID, RoleType: claims.RoleType,
+		UserID:       claims.UserID,
+		RoleType:     claims.RoleType,
+		WithPreloads: true,
 	})
 	if err != nil {
 		return resp.HTTPRespFromError(c, err)
 	}
 
-	staff, err := h.UserUsecase.FetchUserByID(reqCtx, claims.UserID, nil)
+	fieldValidator, err := h.UserUsecase.FetchUserByID(reqCtx, claims.UserID, nil)
 	if err != nil {
 		return resp.HTTPRespFromError(c, err)
 	}
 
-	err = h.Usecase.ApproveLoan(reqCtx, loan, staff)
+	err = h.Usecase.MarkLoanBorrowerVisited(reqCtx, loan, fieldValidator, attachedFile)
 	if err != nil {
 		return resp.HTTPRespFromError(c, err)
 	}
 
-	return resp.HTTPOk(c, loan)
+	return resp.HTTPOk(c, dto.ModelToDto(loan))
 }
